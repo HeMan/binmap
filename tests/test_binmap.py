@@ -30,6 +30,13 @@ def test_baseclass_with_keyword():
     assert "got an unexpected keyword argument 'temp'" in str(excinfo)
 
 
+def test_different_classes_eq(create_temp_class, create_temp_hum_class):
+    t = create_temp_class(temp=10)
+    th = create_temp_hum_class(temp=10, humidity=60)
+    assert t != th
+    assert t.temp == th.temp
+
+
 class TestTempClass:
     def test_with_argument(self, create_temp_class):
         t = create_temp_class(temp=10)
@@ -71,6 +78,18 @@ class TestTempClass:
             t.temp = -1
         assert "ubyte format requires 0 <= number <= 255" in str(excinfo)
 
+    def test_compare_equal(self, create_temp_class):
+        t1 = create_temp_class(temp=10)
+        t2 = create_temp_class(temp=10)
+        assert t1.temp == t2.temp
+        assert t1 == t2
+
+    def test_compare_not_equal(self, create_temp_class):
+        t1 = create_temp_class(temp=10)
+        t2 = create_temp_class(temp=20)
+        assert t1.temp != t2.temp
+        assert t1 != t2
+
 
 class TestTempHumClass:
     def test_with_argument(self, create_temp_hum_class):
@@ -96,3 +115,21 @@ class TestTempHumClass:
         assert th.temp == 30
         assert th.humidity == 30
         assert th.binarydata == struct.pack("BB", 30, 30)
+
+    def test_compare_equal(self, create_temp_hum_class):
+        th1 = create_temp_hum_class(temp=10, humidity=70)
+        th2 = create_temp_hum_class(temp=10, humidity=70)
+        assert th1.temp == th2.temp
+        assert th1 == th2
+
+    def test_compare_not_equal(self, create_temp_hum_class):
+        th1 = create_temp_hum_class(temp=10, humidity=70)
+        th2 = create_temp_hum_class(temp=20, humidity=60)
+        th3 = create_temp_hum_class(temp=10, humidity=60)
+        th4 = create_temp_hum_class(temp=20, humidity=70)
+        assert (th1.temp != th2.temp) and (th1.humidity != th2.humidity)
+        assert th1 != th2
+        assert th1 != th3
+        assert th1 != th4
+        assert th2 != th3
+        assert th2 != th4

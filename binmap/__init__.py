@@ -59,3 +59,13 @@ class Binmap(metaclass=BinmapMetaclass):
         self.__dict__[name] = value
         if name in self._datafields.keys():
             struct.pack(self._datafields[name], value)
+
+    def __eq__(self, other):
+        if self.__signature__ != other.__signature__:
+            return False
+        for field in self._datafields.keys():
+            v1 = getattr(self, field)
+            v2 = getattr(other, field)
+            if v1 != v2:
+                return False
+        return True
