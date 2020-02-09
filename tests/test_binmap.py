@@ -49,7 +49,21 @@ class Property(binmap.Binmap):
 
     @winddirection.setter
     def winddirection(self, value):
-        self.wind = value
+        if isinstance(value, str):
+            if value.lower() == "north":
+                self.wind = Property.NORTH
+            elif value.lower() == "east":
+                self.wind = Property.EAST
+            elif value.lower() == "south":
+                self.wind = Property.SOUTH
+            elif value.lower() == "west":
+                self.wind = Property.WEST
+            else:
+                raise ValueError("Unknown direction")
+        elif isinstance(value, int):
+            self.wind = value
+        else:
+            raise ValueError("Unknown direction")
 
 
 def test_baseclass():
@@ -239,3 +253,16 @@ class TestPropertyClass:
         pc = Property(binarydata=struct.pack("BB", 10, 0))
         assert pc.wind == Property.NORTH
         assert pc.winddirection == "North"
+
+    def test_set_named_wind(self):
+        pc = Property()
+        pc.winddirection = "South"
+        assert pc.wind == Property.SOUTH
+
+        with pytest.raises(ValueError) as excinfo:
+            pc.winddirection = "Norhtwest"
+        assert "Unknown direction" in str(excinfo)
+
+        with pytest.raises(ValueError) as excinfo:
+            pc.winddirection = 1.2
+        assert "Unknown direction" in str(excinfo)
