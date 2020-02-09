@@ -2,13 +2,6 @@ from inspect import Parameter, Signature
 import struct
 
 
-def make_signature(names):
-    return Signature(
-        Parameter(name, Parameter.KEYWORD_ONLY, default=Parameter.default)
-        for name in names
-    )
-
-
 class Padding:
     def __init__(self, name=None):
         self.name = name
@@ -23,11 +16,15 @@ class Padding:
 class BinmapMetaclass(type):
     def __new__(cls, name, bases, clsdict):
         clsobject = super().__new__(cls, name, bases, clsdict)
-        sig = make_signature(clsobject._datafields.keys())
+        keys = clsobject._datafields.keys()
+        sig = Signature(
+            Parameter(name, Parameter.KEYWORD_ONLY, default=Parameter.default)
+            for name in keys
+        )
         setattr(clsobject, "__signature__", sig)
-        for key in clsobject._datafields.keys():
-            if key.startswith("_pad"):
-                setattr(clsobject, key, Padding(name=key))
+        for name in keys:
+            if name.startswith("_pad"):
+                setattr(clsobject, name, Padding(name=name))
         return clsobject
 
 
