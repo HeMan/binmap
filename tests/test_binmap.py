@@ -94,6 +94,12 @@ class TestTempClass:
         t = Temp(binarydata=struct.pack("B", 10))
         assert t.temp == 10
 
+    def test_update_binarydata(self):
+        t = Temp(binarydata=struct.pack("B", 10))
+        assert t.temp == 10
+        t.binarydata = struct.pack("B", 20)
+        assert t.temp == 20
+
     def test_change_value(self):
         t = Temp(temp=10)
         assert t.binarydata == struct.pack("B", 10)

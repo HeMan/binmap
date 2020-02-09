@@ -13,6 +13,18 @@ class Padding:
         pass
 
 
+class BinField:
+    def __init__(self, name=None):
+        self.name = name
+
+    def __get__(self, obj, type=None):
+        return obj.__dict__[self.name]
+
+    def __set__(self, obj, value):
+        obj.__dict__[self.name] = value
+        struct.pack(obj._datafields[self.name], value)
+
+
 class BinmapMetaclass(type):
     def __new__(cls, name, bases, clsdict):
         clsobject = super().__new__(cls, name, bases, clsdict)
@@ -25,6 +37,8 @@ class BinmapMetaclass(type):
         for name in keys:
             if name.startswith("_pad"):
                 setattr(clsobject, name, Padding(name=name))
+            else:
+                setattr(clsobject, name, BinField(name=name))
         return clsobject
 
 
@@ -69,11 +83,6 @@ class Binmap(metaclass=BinmapMetaclass):
     def binarydata(self, value):
         self._unpacker(value)
         self._binarydata = value
-
-    def __setattr__(self, name, value):
-        self.__dict__[name] = value
-        if (not name.startswith("_pad")) and name in self._datafields.keys():
-            struct.pack(self._datafields[name], value)
 
     def __eq__(self, other):
         if self.__signature__ != other.__signature__:
