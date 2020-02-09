@@ -19,6 +19,28 @@ def create_temp_hum_class():
     return TempHum
 
 
+@pytest.fixture
+def create_pad_class():
+    class PadClass(binmap.Binmap):
+        _datafields = {"temp": "B", "_pad1": "xx", "humidity": "B"}
+
+    return PadClass
+
+
+@pytest.fixture
+def create_advanced_pad_class():
+    class AdvancedPadClass(binmap.Binmap):
+        _datafields = {
+            "temp": "B",
+            "_pad1": "xx",
+            "humidity": "B",
+            "_pad2": "3x",
+            "_pad3": "x",
+        }
+
+    return AdvancedPadClass
+
+
 def test_baseclass():
     b = binmap.Binmap()
     assert type(b) == binmap.Binmap
@@ -133,3 +155,55 @@ class TestTempHumClass:
         assert th1 != th4
         assert th2 != th3
         assert th2 != th4
+
+
+class TestPadClass:
+    def test_create_pad(self, create_pad_class):
+        p = create_pad_class(temp=10, humidity=60)
+        assert p.temp == 10
+        with pytest.raises(AttributeError) as excinfo:
+            p._pad1
+        assert "Padding (_pad1) is not readable" in str(excinfo)
+        assert p.humidity == 60
+
+    def test_parse_data(self, create_pad_class):
+        p = create_pad_class(binarydata=struct.pack("BxxB", 10, 60))
+        assert p.temp == 10
+        with pytest.raises(AttributeError) as excinfo:
+            p._pad1
+        assert "Padding (_pad1) is not readable" in str(excinfo)
+        assert p.humidity == 60
+
+    def test_pack_data(self, create_pad_class):
+        p = create_pad_class()
+        p.temp = 10
+        p.humidity = 60
+        assert p.binarydata == struct.pack("BxxB", 10, 60)
+
+    def test_advanced_pad(self, create_advanced_pad_class):
+        p = create_advanced_pad_class(temp=10, humidity=60)
+        assert p.temp == 10
+        assert p.humidity == 60
+        with pytest.raises(AttributeError) as excinfo:
+            p._pad1
+        assert "Padding (_pad1) is not readable" in str(excinfo)
+        with pytest.raises(AttributeError) as excinfo:
+            p._pad2
+        assert "Padding (_pad2) is not readable" in str(excinfo)
+        with pytest.raises(AttributeError) as excinfo:
+            p._pad3
+        assert "Padding (_pad3) is not readable" in str(excinfo)
+
+    def test_advanced_parse_data(self, create_advanced_pad_class):
+        p = create_advanced_pad_class(binarydata=struct.pack("BxxB4x", 10, 60))
+        assert p.temp == 10
+        with pytest.raises(AttributeError) as excinfo:
+            p._pad1
+        assert "Padding (_pad1) is not readable" in str(excinfo)
+        assert p.humidity == 60
+
+    def test_advanced_pack_data(self, create_advanced_pad_class):
+        p = create_advanced_pad_class()
+        p.temp = 10
+        p.humidity = 60
+        assert p.binarydata == struct.pack("BxxB4x", 10, 60)
