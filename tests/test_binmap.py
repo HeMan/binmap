@@ -250,9 +250,9 @@ class TestPropertyClass:
         assert pc.winddirection == "South"
 
     def test_wind_binary(self):
-        pc = Property(binarydata=struct.pack("BB", 10, 0))
-        assert pc.wind == Property.NORTH
-        assert pc.winddirection == "North"
+        pc = Property(binarydata=struct.pack("BB", 10, 2))
+        assert pc.wind == Property.SOUTH
+        assert pc.winddirection == "South"
 
     def test_set_named_wind(self):
         pc = Property()
