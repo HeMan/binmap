@@ -21,8 +21,8 @@ class BinField:
         return obj.__dict__[self.name]
 
     def __set__(self, obj, value):
-        obj.__dict__[self.name] = value
         struct.pack(obj._datafields[self.name], value)
+        obj.__dict__[self.name] = value
 
 
 class BinmapMetaclass(type):
