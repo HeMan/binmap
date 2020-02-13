@@ -6,6 +6,7 @@ import struct
 def test_baseclass():
     b = binmap.Binmap()
     assert type(b) == binmap.Binmap
+    assert str(b) == "Binmap"
 
 
 def test_baseclass_with_keyword():
@@ -33,6 +34,7 @@ class TestTempClass:
     def test_with_argument(self):
         t = Temp(temp=10)
         assert t.temp == 10
+        assert str(t) == "Temp, temp=10"
 
     def test_without_argument(self):
         t = Temp()
@@ -94,6 +96,7 @@ class TestTempHumClass:
         th = TempHum(temp=10, humidity=60)
         assert th.temp == 10
         assert th.humidity == 60
+        assert str(th) == "TempHum, temp=10, humidity=60"
 
     def test_without_argument(self):
         th = TempHum()
@@ -155,6 +158,7 @@ class TestPadClass:
             p._pad1
         assert "Padding (_pad1) is not readable" in str(excinfo)
         assert p.humidity == 60
+        assert str(p) == "Pad, temp=10, humidity=60"
 
     def test_parse_data(self):
         p = Pad(binarydata=struct.pack("BxxB", 10, 60))
@@ -190,7 +194,11 @@ class TestPadClass:
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert "Padding (_pad1) is not readable" in str(excinfo)
+        with pytest.raises(AttributeError) as excinfo:
+            p._pad2
+        assert "Padding (_pad2) is not readable" in str(excinfo)
         assert p.humidity == 60
+        assert str(p) == "AdvancedPad, temp=10, humidity=60"
 
     def test_advanced_pack_data(self):
         p = AdvancedPad()
@@ -239,6 +247,9 @@ class Property(binmap.Binmap):
         else:
             raise ValueError("Unknown direction")
 
+    def __str__(self):
+        return f"{self.__class__.__name__}, temp={self.temp}, winddirection={self.winddirection}"
+
 
 class TestPropertyClass:
     def test_create_class(self):
@@ -248,6 +259,7 @@ class TestPropertyClass:
     def test_get_wind(self):
         pc = Property(temp=10, wind=2)
         assert pc.winddirection == "South"
+        assert pc.__str__() == "Property, temp=10, winddirection=South"
 
     def test_wind_binary(self):
         pc = Property(binarydata=struct.pack("BB", 10, 2))

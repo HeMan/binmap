@@ -100,3 +100,11 @@ class Binmap(metaclass=BinmapMetaclass):
             if v1 != v2:
                 return False
         return True
+
+    def __str__(self):
+        retval = f"{self.__class__.__name__}"
+        if self._datafields:
+            for key in self._datafields.keys():
+                if not key.startswith("_pad"):
+                    retval += ", %s=%s" % (key, getattr(self, key))
+        return retval
