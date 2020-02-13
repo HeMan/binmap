@@ -3,69 +3,6 @@ import pytest
 import struct
 
 
-class Temp(binmap.Binmap):
-    _datafields = {"temp": "B"}
-
-
-class TempHum(binmap.Binmap):
-    _datafields = {"temp": "B", "humidity": "B"}
-
-
-class Pad(binmap.Binmap):
-    _datafields = {"temp": "B", "_pad1": "xx", "humidity": "B"}
-
-
-class AdvancedPad(binmap.Binmap):
-    _datafields = {
-        "temp": "B",
-        "_pad1": "xx",
-        "humidity": "B",
-        "_pad2": "3x",
-        "_pad3": "x",
-    }
-
-
-class Property(binmap.Binmap):
-    _datafields = {
-        "temp": "B",
-        "wind": "B",
-    }
-
-    NORTH = 0
-    EAST = 1
-    SOUTH = 2
-    WEST = 3
-
-    @property
-    def winddirection(self):
-        if self.wind == Property.NORTH:
-            return "North"
-        if self.wind == Property.EAST:
-            return "East"
-        if self.wind == Property.SOUTH:
-            return "South"
-        if self.wind == Property.WEST:
-            return "West"
-
-    @winddirection.setter
-    def winddirection(self, value):
-        if isinstance(value, str):
-            if value.lower() == "north":
-                self.wind = Property.NORTH
-            elif value.lower() == "east":
-                self.wind = Property.EAST
-            elif value.lower() == "south":
-                self.wind = Property.SOUTH
-            elif value.lower() == "west":
-                self.wind = Property.WEST
-            else:
-                raise ValueError("Unknown direction")
-        elif isinstance(value, int):
-            self.wind = value
-        else:
-            raise ValueError("Unknown direction")
-
-
 def test_baseclass():
     b = binmap.Binmap()
     assert type(b) == binmap.Binmap
@@ -75,6 +12,14 @@ def test_baseclass_with_keyword():
     with pytest.raises(TypeError) as excinfo:
         binmap.Binmap(temp=10)
     assert "got an unexpected keyword argument 'temp'" in str(excinfo)
+
+
+class Temp(binmap.Binmap):
+    _datafields = {"temp": "B"}
+
+
+class TempHum(binmap.Binmap):
+    _datafields = {"temp": "B", "humidity": "B"}
 
 
 def test_different_classes_eq():
@@ -188,6 +133,20 @@ class TestTempHumClass:
         assert th2 != th4
 
 
+class Pad(binmap.Binmap):
+    _datafields = {"temp": "B", "_pad1": "xx", "humidity": "B"}
+
+
+class AdvancedPad(binmap.Binmap):
+    _datafields = {
+        "temp": "B",
+        "_pad1": "xx",
+        "humidity": "B",
+        "_pad2": "3x",
+        "_pad3": "x",
+    }
+
+
 class TestPadClass:
     def test_create_pad(self):
         p = Pad(temp=10, humidity=60)
@@ -238,6 +197,47 @@ class TestPadClass:
         p.temp = 10
         p.humidity = 60
         assert p.binarydata == struct.pack("BxxB4x", 10, 60)
+
+
+class Property(binmap.Binmap):
+    _datafields = {
+        "temp": "B",
+        "wind": "B",
+    }
+
+    NORTH = 0
+    EAST = 1
+    SOUTH = 2
+    WEST = 3
+
+    @property
+    def winddirection(self):
+        if self.wind == Property.NORTH:
+            return "North"
+        if self.wind == Property.EAST:
+            return "East"
+        if self.wind == Property.SOUTH:
+            return "South"
+        if self.wind == Property.WEST:
+            return "West"
+
+    @winddirection.setter
+    def winddirection(self, value):
+        if isinstance(value, str):
+            if value.lower() == "north":
+                self.wind = Property.NORTH
+            elif value.lower() == "east":
+                self.wind = Property.EAST
+            elif value.lower() == "south":
+                self.wind = Property.SOUTH
+            elif value.lower() == "west":
+                self.wind = Property.WEST
+            else:
+                raise ValueError("Unknown direction")
+        elif isinstance(value, int):
+            self.wind = value
+        else:
+            raise ValueError("Unknown direction")
 
 
 class TestPropertyClass:
