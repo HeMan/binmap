@@ -266,3 +266,114 @@ class TestPropertyClass:
         with pytest.raises(ValueError) as excinfo:
             pc.winddirection = 1.2
         assert "Unknown direction" in str(excinfo)
+
+
+class AllDatatypes(binmap.Binmap):
+    _datafields = {
+        "_pad": "x",
+        "char": "c",
+        "signedchar": "b",
+        "unsignedchar": "B",
+        "boolean": "?",
+        "short": "h",
+        "unsignedshort": "H",
+        "integer": "i",
+        "unsignedint": "I",
+        "long": "l",
+        "unsignedlong": "L",
+        "longlong": "q",
+        "unsignedlonglong": "Q",
+        "ssize_t": "n",
+        "size_t": "N",
+        "halffloat": "e",
+        "floating": "f",
+        "double": "d",
+        "string": "10s",
+        "pascalstring": "15p",
+        "pointer": "P",
+    }
+
+
+class TestAllDatatypes:
+    def test_create_class(self):
+        sc = AllDatatypes()
+        assert sc
+
+    def test_with_arguments(self):
+        sc = AllDatatypes(
+            char=b"%",
+            signedchar=-2,
+            unsignedchar=5,
+            boolean=True,
+            short=-7,
+            unsignedshort=17,
+            integer=-15,
+            unsignedint=11,
+            long=-2312,
+            unsignedlong=2212,
+            longlong=-1212,
+            unsignedlonglong=4444,
+            ssize_t=15,
+            size_t=22,
+            halffloat=3.5,
+            floating=3e3,
+            double=13e23,
+            string=b"helloworld",
+            pascalstring=b"hello pascal",
+            pointer=0xFCE2,
+        )
+        assert sc.char == b"%"
+        assert sc.signedchar == -2
+        assert sc.unsignedchar == 5
+        assert sc.boolean
+        assert sc.short == -7
+        assert sc.unsignedshort == 17
+        assert sc.integer == -15
+        assert sc.unsignedint == 11
+        assert sc.long == -2312
+        assert sc.unsignedlong == 2212
+        assert sc.longlong == -1212
+        assert sc.unsignedlonglong == 4444
+        assert sc.ssize_t == 15
+        assert sc.size_t == 22
+        assert sc.halffloat == 3.5
+        assert sc.floating == 3e3
+        assert sc.double == 13e23
+        assert sc.string == b"helloworld"
+        assert sc.pascalstring == b"hello pascal"
+        assert sc.pointer == 0xFCE2
+        assert (
+            sc.binarydata
+            == b"\x00%\xfe\x05\x01\x00\xf9\xff\x11\x00\x00\x00\xf1\xff\xff\xff\x0b\x00\x00\x00\x00\x00\x00\x00\xf8\xf6\xff\xff\xff\xff\xff\xff\xa4\x08"
+            b"\x00\x00\x00\x00\x00\x00D\xfb\xff\xff\xff\xff\xff\xff\\\x11\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00\x00\x00\x00"
+            b"\x00\x00\x00C\x00\x00\x00\x80;E\xe8\x0cgB\x924\xf1Dhelloworld\x0chello pascal\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe2\xfc\x00\x00\x00\x00\x00\x00"
+        )
+
+    def test_with_binarydata(self):
+        sc = AllDatatypes(
+            binarydata=b"\x0fW\xee\x15\x00\x00\xf9\xf4\x11\x10\x00\x00\x31\xff\xff\xff\x0b\x01\x00\x00\x00\x00\x00\x00"
+            b"\xf8\xe6\xff\xff\xff\xff\xff\xff\xa4\x18\x00\x00\x00\x00\x00\x00E\xfb\xff\xff\xff\xff\xff\xff\\\x11\x01"
+            b"\x00\x00\x00\x00\x00\x1f\x00\x00\x00\x00\x00\x00\x00\x26\x00\x00\x00\x00\x00\x00"
+            b"\x00\x01C\x00\x00\x00\x81;E\xe8\x0cgB\xa24\xf1Dhi world  \x09hi pascal\x00\x00"
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe3\xfc\x00\x00\x00\x00\x00\x00"
+        )
+        assert sc.char == b"W"
+        assert sc.signedchar == -18
+        assert sc.unsignedchar == 21
+        assert not sc.boolean
+        assert sc.short == -2823
+        assert sc.unsignedshort == 4113
+        assert sc.integer == -207
+        assert sc.unsignedint == 267
+        assert sc.long == -6408
+        assert sc.unsignedlong == 6308
+        assert sc.longlong == -1211
+        assert sc.unsignedlonglong == 69980
+        assert sc.ssize_t == 31
+        assert sc.size_t == 38
+        assert sc.halffloat == 3.501953125
+        assert sc.floating == 3000.0625
+        assert sc.double == 1.3000184467440736e24
+        assert sc.string == b"hi world  "
+        assert sc.pascalstring == b"hi pascal"
+        assert sc.pointer == 0xFCE3

@@ -55,7 +55,14 @@ class Binmap(metaclass=BinmapMetaclass):
             if param.name in bound.arguments.keys():
                 setattr(self, param.name, bound.arguments[param.name])
             else:
-                setattr(self, param.name, 0)
+                if self._datafields[param.name] in "BbHhIiLlQqNnP":
+                    setattr(self, param.name, 0)
+                elif self._datafields[param.name] in "efd":
+                    setattr(self, param.name, 0.0)
+                elif self._datafields[param.name] == "c":
+                    setattr(self, param.name, b"\x00")
+                else:
+                    setattr(self, param.name, b"")
 
         if binarydata:
             self._binarydata = binarydata
