@@ -237,77 +237,58 @@ class TestPadClass:
         assert p.binarydata == struct.pack("BxxB4x", 10, 60)
 
 
-class Property(binmap.Binmap):
+class EnumClass(binmap.Binmap):
     _datafields = {
         "temp": "B",
         "wind": "B",
     }
 
-    NORTH = 0
-    EAST = 1
-    SOUTH = 2
-    WEST = 3
-
-    @property
-    def winddirection(self):
-        if self.wind == Property.NORTH:
-            return "North"
-        if self.wind == Property.EAST:
-            return "East"
-        if self.wind == Property.SOUTH:
-            return "South"
-        if self.wind == Property.WEST:
-            return "West"
-
-    @winddirection.setter
-    def winddirection(self, value):
-        if isinstance(value, str):
-            if value.lower() == "north":
-                self.wind = Property.NORTH
-            elif value.lower() == "east":
-                self.wind = Property.EAST
-            elif value.lower() == "south":
-                self.wind = Property.SOUTH
-            elif value.lower() == "west":
-                self.wind = Property.WEST
-            else:
-                raise ValueError("Unknown direction")
-        elif isinstance(value, int):
-            self.wind = value
-        else:
-            raise ValueError("Unknown direction")
-
-    def __str__(self):
-        return f"{self.__class__.__name__}, temp={self.temp}, winddirection={self.winddirection}"
+    _enums = {"wind": {0: "North", 1: "East", 2: "South", 4: "West"}}
 
 
-class TestPropertyClass:
+class TestEnumClass:
     def test_create_class(self):
-        pc = Property()
+        pc = EnumClass()
         assert pc
+        assert EnumClass.SOUTH == 2
 
-    def test_get_wind(self):
-        pc = Property(temp=10, wind=2)
-        assert pc.winddirection == "South"
-        assert pc.__str__() == "Property, temp=10, winddirection=South"
+    def test_get_enum(self):
+        pc = EnumClass(temp=10, wind=2)
+        assert pc.wind == "South"
+        assert str(pc) == "EnumClass, temp=10, wind=South"
 
-    def test_wind_binary(self):
-        pc = Property(binarydata=struct.pack("BB", 10, 2))
-        assert pc.wind == Property.SOUTH
-        assert pc.winddirection == "South"
+    def test_enum_binary(self):
+        pc = EnumClass(binarydata=struct.pack("BB", 10, 2))
+        assert pc.wind == "South"
+        assert str(pc) == "EnumClass, temp=10, wind=South"
 
-    def test_set_named_wind(self):
-        pc = Property()
-        pc.winddirection = "South"
-        assert pc.wind == Property.SOUTH
-
-        with pytest.raises(ValueError) as excinfo:
-            pc.winddirection = "Norhtwest"
-        assert "Unknown direction" in str(excinfo)
+    def test_set_named_enum(self):
+        pc = EnumClass()
+        pc.wind = "South"
+        assert pc.binarydata == struct.pack("BB", 0, 2)
 
         with pytest.raises(ValueError) as excinfo:
-            pc.winddirection = 1.2
-        assert "Unknown direction" in str(excinfo)
+            pc.wind = "Norhtwest"
+        assert "Unknown enum or value" in str(excinfo)
+
+        with pytest.raises(ValueError) as excinfo:
+            pc.wind = 1.2
+        assert "Unknown enum or value" in str(excinfo)
+
+    def test_colliding_enums(self):
+        with pytest.raises(ValueError) as excinfo:
+
+            class EnumCollide(binmap.Binmap):
+                _datafields = {
+                    "wind1": "B",
+                    "wind2": "B",
+                }
+                _enums = {
+                    "wind1": {0: "North"},
+                    "wind2": {2: "North"},
+                }
+
+        assert "North already defined" in str(excinfo)
 
 
 class AllDatatypes(binmap.Binmap):

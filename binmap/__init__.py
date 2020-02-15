@@ -25,6 +25,25 @@ class BinField:
         obj.__dict__[self.name] = value
 
 
+class EnumField:
+    def __init__(self, name=None):
+        self.name = name
+
+    def __get__(self, obj, owner):
+        value = obj.__dict__[f"_{self.name}"]
+        return obj._enums[self.name][value]
+
+    def __set__(self, obj, value):
+        if value in obj._enums[self.name].keys():
+            obj.__dict__[f"_{self.name}"] = value
+        elif value in obj._enums[self.name].values():
+            for k, v in obj._enums[self.name].items():
+                if v == value:
+                    obj.__dict__[f"_{self.name}"] = k
+        else:
+            raise ValueError("Unknown enum or value")
+
+
 class BinmapMetaclass(type):
     def __new__(cls, clsname, bases, clsdict):
         clsobject = super().__new__(cls, clsname, bases, clsdict)
@@ -34,9 +53,17 @@ class BinmapMetaclass(type):
             for name in keys
         )
         setattr(clsobject, "__signature__", sig)
+        for enum in clsobject._enums.keys():
+            for value, const in clsobject._enums[enum].items():
+                if hasattr(clsobject, const.upper()):
+                    raise ValueError(f"{const} already defined")
+                setattr(clsobject, const.upper(), value)
         for name in keys:
             if name.startswith("_pad"):
                 setattr(clsobject, name, Padding(name=name))
+            elif name in clsobject._enums.keys():
+                setattr(clsobject, name, EnumField(name=name))
+                setattr(clsobject, f"_{name}", BinField(name=f"_{name}"))
             else:
                 setattr(clsobject, name, BinField(name=name))
         return clsobject
@@ -44,6 +71,7 @@ class BinmapMetaclass(type):
 
 class Binmap(metaclass=BinmapMetaclass):
     _datafields = {}
+    _enums = {}
 
     def __init__(self, *args, binarydata=None, **kwargs):
         self._formatstring = ""
@@ -83,7 +111,10 @@ class Binmap(metaclass=BinmapMetaclass):
         datas = []
         for var in self._datafields.keys():
             if not var.startswith("_pad"):
-                datas.append(getattr(self, var))
+                if var in self._enums.keys():
+                    datas.append(getattr(self, f"_{var}"))
+                else:
+                    datas.append(getattr(self, var))
         return struct.pack(self._formatstring, *datas)
 
     @binarydata.setter
