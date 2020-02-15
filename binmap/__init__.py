@@ -1,12 +1,12 @@
-from inspect import Parameter, Signature
 import struct
+from inspect import Parameter, Signature
 
 
 class Padding:
     def __init__(self, name=None):
         self.name = name
 
-    def __get__(self, obj, type=None):
+    def __get__(self, obj, owner):
         raise AttributeError(f"Padding ({self.name}) is not readable")
 
     def __set__(self, obj, value):
@@ -17,7 +17,7 @@ class BinField:
     def __init__(self, name=None):
         self.name = name
 
-    def __get__(self, obj, type=None):
+    def __get__(self, obj, owner):
         return obj.__dict__[self.name]
 
     def __set__(self, obj, value):

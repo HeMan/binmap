@@ -1,6 +1,8 @@
-import binmap
-import pytest
 import struct
+
+import pytest
+
+import binmap
 
 
 def test_baseclass():
