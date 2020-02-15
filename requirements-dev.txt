@@ -2,6 +2,8 @@ black
 bumpversion
 flake8
 flake8-black
+flake8-builtins
+flake8-isort
 flask-shell-ipython
 ipython
 jedi
