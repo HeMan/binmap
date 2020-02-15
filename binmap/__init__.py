@@ -26,8 +26,8 @@ class BinField:
 
 
 class BinmapMetaclass(type):
-    def __new__(cls, name, bases, clsdict):
-        clsobject = super().__new__(cls, name, bases, clsdict)
+    def __new__(cls, clsname, bases, clsdict):
+        clsobject = super().__new__(cls, clsname, bases, clsdict)
         keys = clsobject._datafields.keys()
         sig = Signature(
             Parameter(name, Parameter.KEYWORD_ONLY, default=Parameter.default)
