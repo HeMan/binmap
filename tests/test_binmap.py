@@ -15,6 +15,34 @@ def test_baseclass_with_keyword():
     assert "got an unexpected keyword argument 'temp'" in str(excinfo)
 
 
+def test_illegal_fieldnames():
+    with pytest.raises(ValueError) as excinfo:
+
+        class Space(binmap.Binmap):
+            _datafields = {
+                " ": "B",
+            }
+
+    assert "' ' is not a valid parameter name" in str(excinfo)
+
+    with pytest.raises(ValueError) as excinfo:
+
+        class BadName(binmap.Binmap):
+            _datafields = {
+                "-a": "B",
+            }
+
+    assert "'-a' is not a valid parameter name" in str(excinfo)
+    with pytest.raises(ValueError) as excinfo:
+
+        class Number(binmap.Binmap):
+            _datafields = {
+                "1": "B",
+            }
+
+    assert "'1' is not a valid parameter name" in str(excinfo)
+
+
 class Temp(binmap.Binmap):
     _datafields = {"temp": "B"}
 
