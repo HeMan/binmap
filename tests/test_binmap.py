@@ -291,6 +291,41 @@ class TestEnumClass:
         assert "North already defined" in str(excinfo)
 
 
+class ConstValues(binmap.Binmap):
+    _datafields = {"datatype": "B", "status": "B"}
+    _constants = {"datatype": 0x15}
+
+
+class TestConstValues:
+    def test_create_class(self):
+        c = ConstValues()
+        assert c.datatype == 0x15
+
+        with pytest.raises(AttributeError) as excinfo:
+            ConstValues(datatype=0x14, status=1)
+            print(excinfo)
+        assert "datatype is a constant" in str(excinfo)
+
+    def test_set_value(self):
+        c = ConstValues(status=1)
+        assert c.datatype == 0x15
+        assert c.status == 1
+        with pytest.raises(AttributeError) as excinfo:
+            c.datatype = 0x14
+        assert "datatype is a constant" in str(excinfo)
+        assert c.binarydata == b"\x15\x01"
+
+    def test_binary_data(self):
+        c = ConstValues(binarydata=b"\x15\x01")
+        assert c.datatype == 0x15
+        assert c.status == 1
+
+        with pytest.raises(ValueError) as excinfo:
+            ConstValues(binarydata=b"\x14\x01")
+
+        assert "Constant doesn't match binary data" in str(excinfo)
+
+
 class AllDatatypes(binmap.Binmap):
     _datafields = {
         "_pad": "x",

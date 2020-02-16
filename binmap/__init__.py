@@ -44,6 +44,11 @@ class EnumField:
             raise ValueError("Unknown enum or value")
 
 
+class Const(BinField):
+    def __set__(self, obj, value):
+        raise AttributeError(f"{self.name} is a constant")
+
+
 class BinmapMetaclass(type):
     def __new__(cls, clsname, bases, clsdict):
         clsobject = super().__new__(cls, clsname, bases, clsdict)
@@ -61,6 +66,8 @@ class BinmapMetaclass(type):
         for name in keys:
             if name.startswith("_pad"):
                 setattr(clsobject, name, Padding(name=name))
+            elif name in clsobject._constants.keys():
+                setattr(clsobject, name, Const(name=name))
             elif name in clsobject._enums.keys():
                 setattr(clsobject, name, EnumField(name=name))
                 setattr(clsobject, f"_{name}", BinField(name=f"_{name}"))
@@ -72,6 +79,7 @@ class BinmapMetaclass(type):
 class Binmap(metaclass=BinmapMetaclass):
     _datafields = {}
     _enums = {}
+    _constants = {}
 
     def __init__(self, *args, binarydata=None, **kwargs):
         self._formatstring = ""
@@ -81,9 +89,13 @@ class Binmap(metaclass=BinmapMetaclass):
         bound = self.__signature__.bind(*args, **kwargs)
         for param in self.__signature__.parameters.values():
             if param.name in bound.arguments.keys():
+                if param.name in self._constants.keys():
+                    raise AttributeError(f"{param.name} is a constant")
                 setattr(self, param.name, bound.arguments[param.name])
             else:
-                if self._datafields[param.name] in "BbHhIiLlQqNnP":
+                if param.name in self._constants.keys():
+                    self.__dict__[param.name] = self._constants[param.name]
+                elif self._datafields[param.name] in "BbHhIiLlQqNnP":
                     setattr(self, param.name, 0)
                 elif self._datafields[param.name] in "efd":
                     setattr(self, param.name, 0.0)
@@ -104,7 +116,11 @@ class Binmap(metaclass=BinmapMetaclass):
             field for field in self._datafields.keys() if not field.startswith("_pad")
         ]
         for arg, name in zip(args, datafields):
-            setattr(self, name, arg)
+            if name in self._constants.keys():
+                if arg != self._constants[name]:
+                    raise ValueError("Constant doesn't match binary data")
+            else:
+                setattr(self, name, arg)
 
     @property
     def binarydata(self):
