@@ -213,18 +213,18 @@ class AdvancedPad(binmap.Binmap):
 class TestPadClass:
     def test_create_pad(self):
         p = Pad(temp=10, humidity=60)
-        assert p.temp == 10
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert "Padding (_pad1) is not readable" in str(excinfo)
+        assert p.temp == 10
         assert p.humidity == 60
         assert str(p) == "Pad, temp=10, humidity=60"
 
     def test_parse_data(self):
         p = Pad(binarydata=struct.pack("BxxB", 10, 60))
-        assert p.temp == 10
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
+        assert p.temp == 10
         assert "Padding (_pad1) is not readable" in str(excinfo)
         assert p.humidity == 60
 
@@ -236,8 +236,6 @@ class TestPadClass:
 
     def test_advanced_pad(self):
         p = AdvancedPad(temp=10, humidity=60)
-        assert p.temp == 10
-        assert p.humidity == 60
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert "Padding (_pad1) is not readable" in str(excinfo)
@@ -247,10 +245,11 @@ class TestPadClass:
         with pytest.raises(AttributeError) as excinfo:
             p._pad3
         assert "Padding (_pad3) is not readable" in str(excinfo)
+        assert p.temp == 10
+        assert p.humidity == 60
 
     def test_advanced_parse_data(self):
         p = AdvancedPad(binarydata=struct.pack("BxxB4x", 10, 60))
-        assert p.temp == 10
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert "Padding (_pad1) is not readable" in str(excinfo)
@@ -258,6 +257,7 @@ class TestPadClass:
             p._pad2
         assert "Padding (_pad2) is not readable" in str(excinfo)
         assert p.humidity == 60
+        assert p.temp == 10
         assert str(p) == "AdvancedPad, temp=10, humidity=60"
 
     def test_advanced_pack_data(self):
@@ -329,31 +329,27 @@ class ConstValues(binmap.Binmap):
 class TestConstValues:
     def test_create_class(self):
         c = ConstValues()
-        assert c.datatype == 0x15
-
         with pytest.raises(AttributeError) as excinfo:
             ConstValues(datatype=0x14, status=1)
-            print(excinfo)
         assert "datatype is a constant" in str(excinfo)
+        assert c.datatype == 0x15
 
     def test_set_value(self):
         c = ConstValues(status=1)
-        assert c.datatype == 0x15
-        assert c.status == 1
         with pytest.raises(AttributeError) as excinfo:
             c.datatype = 0x14
         assert "datatype is a constant" in str(excinfo)
+        assert c.datatype == 0x15
+        assert c.status == 1
         assert c.binarydata == b"\x15\x01"
 
     def test_binary_data(self):
         c = ConstValues(binarydata=b"\x15\x01")
-        assert c.datatype == 0x15
-        assert c.status == 1
-
         with pytest.raises(ValueError) as excinfo:
             ConstValues(binarydata=b"\x14\x01")
-
         assert "Constant doesn't match binary data" in str(excinfo)
+        assert c.datatype == 0x15
+        assert c.status == 1
 
 
 class AllDatatypes(binmap.Binmap):
@@ -421,7 +417,6 @@ class TestAllDatatypes:
         assert sc.double == 13e23
         assert sc.string == b"helloworld"
         assert sc.pascalstring == b"hello pascal"
-        print(sc.binarydata)
         assert (
             sc.binarydata
             == b"\x00%\xfe\x05\x01\xff\xf9\x00\x11\xff\xff\xff\xf1\x00\x00\x00\x0b\xff\xff\xf6\xf8\x00\x00"
