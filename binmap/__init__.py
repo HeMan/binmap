@@ -2,20 +2,18 @@ import struct
 from inspect import Parameter, Signature
 
 
-class Padding:
-    def __init__(self, name=None):
+class BaseDescriptor:
+    """Base class for all descriptors
+
+    :param name: Variable name"""
+
+    def __init__(self, name):
         self.name = name
 
-    def __get__(self, obj, owner):
-        raise AttributeError(f"Padding ({self.name}) is not readable")
 
-    def __set__(self, obj, value):
-        pass
-
-
-class BinField:
-    def __init__(self, name=None):
-        self.name = name
+class BinField(BaseDescriptor):
+    """BinField descriptor tries to pack it into a struct before setting the
+    value as a bounds checker"""
 
     def __get__(self, obj, owner):
         return obj.__dict__[self.name]
@@ -25,9 +23,22 @@ class BinField:
         obj.__dict__[self.name] = value
 
 
-class EnumField:
-    def __init__(self, name=None):
-        self.name = name
+class PaddingField(BaseDescriptor):
+    """PaddingField descriptor is used to "pad" data with values unused for real data"""
+
+    def __get__(self, obj, owner):
+        """Getting values fails"""
+        raise AttributeError(f"Padding ({self.name}) is not readable")
+
+    def __set__(self, obj, value):
+        """Setting values does nothing"""
+        pass
+
+
+class EnumField(BaseDescriptor):
+    """EnumField descriptor uses "enum" to map to and from strings. Accepts
+    both strings and values when setting. Only values that has a corresponding
+    string is allowed."""
 
     def __get__(self, obj, owner):
         value = obj.__dict__[f"_{self.name}"]
@@ -44,12 +55,23 @@ class EnumField:
             raise ValueError("Unknown enum or value")
 
 
-class Const(BinField):
+class ConstField(BinField):
+    """ConstField descriptor keeps it's value"""
+
     def __set__(self, obj, value):
         raise AttributeError(f"{self.name} is a constant")
 
 
 class BinmapMetaclass(type):
+    """Metaclass for :class:`Binmap` and all subclasses of :class:`Binmap`.
+
+    :class:`BinmapMetaclass` responsibility is to add for adding variables from
+    _datafields, _enums, _constants and add keyword only parameters.
+
+    _datafields starting with ``_pad`` does't get any instance variable mapped.
+
+    _enums get a variable called _{name} which has the binary data."""
+
     def __new__(cls, clsname, bases, clsdict):
         clsobject = super().__new__(cls, clsname, bases, clsdict)
         keys = clsobject._datafields.keys()
@@ -65,9 +87,9 @@ class BinmapMetaclass(type):
                 setattr(clsobject, const.upper(), value)
         for name in keys:
             if name.startswith("_pad"):
-                setattr(clsobject, name, Padding(name=name))
+                setattr(clsobject, name, PaddingField(name=name))
             elif name in clsobject._constants.keys():
-                setattr(clsobject, name, Const(name=name))
+                setattr(clsobject, name, ConstField(name=name))
             elif name in clsobject._enums.keys():
                 setattr(clsobject, name, EnumField(name=name))
                 setattr(clsobject, f"_{name}", BinField(name=f"_{name}"))
@@ -77,8 +99,35 @@ class BinmapMetaclass(type):
 
 
 class Binmap(metaclass=BinmapMetaclass):
+    """A class that maps to and from binary data using :py:class:`struct`.
+    All fields in :attr:`binmap.Binmap._datafields` gets a corresponding
+    variable in instance, except variables starting with ``_pad``, which is
+    just padding.
+
+    To create an enum mapping you could add :attr:`binmap.Binmap._enums` with a
+    map to your corresponing datafield:
+
+    .. code-block:: python
+
+        class TempWind(Binmap):
+            _datafields = {"temp": "b", "wind": "B"}
+            _enums = {"wind": {0: "North", 1: "East", 2: "South", 4: "West"}}
+
+        tw = TempWind()
+        tw.temp = 3
+        tw.wind = "South"
+        print(tw.binarydata)
+        b'\\x03\\x02'
+
+
+    """
+
+    #: _datafields: dict with variable name as key and :py:class:`struct` `format strings`_ as value
     _datafields = {}
+    #: _enums: dict of dicts containing maps of strings
     _enums = {}
+    #: _constans: dict of constants. This creates a variable that is allways
+    #: the same value. It won't accept binary data with any other value
     _constants = {}
 
     def __init__(self, *args, binarydata=None, **kwargs):
@@ -124,6 +173,8 @@ class Binmap(metaclass=BinmapMetaclass):
 
     @property
     def binarydata(self):
+        """packs or unpacks all variables to a binary structure defined by
+        _datafields' format values"""
         datas = []
         for var in self._datafields.keys():
             if not var.startswith("_pad"):
