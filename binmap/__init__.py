@@ -51,8 +51,8 @@ class EnumField(BaseDescriptor):
             if v == value:
                 obj.__dict__[f"_{self.name}"] = k
                 return
-        else:
-            raise ValueError("Unknown enum or value")
+
+        raise ValueError("Unknown enum or value")
 
 
 class ConstField(BinField):
