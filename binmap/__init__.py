@@ -45,7 +45,7 @@ class EnumField(BaseDescriptor):
         return obj._enums[self.name][value]
 
     def __set__(self, obj, value):
-        if value in obj._enums[self.name].keys():
+        if value in obj._enums[self.name]:
             obj.__dict__[f"_{self.name}"] = value
         elif value in obj._enums[self.name].values():
             for k, v in obj._enums[self.name].items():
@@ -97,9 +97,9 @@ class BinmapMetaclass(type):
         for name in keys:
             if name.startswith("_pad"):
                 setattr(clsobject, name, PaddingField(name=name))
-            elif name in clsobject._constants.keys():
+            elif name in clsobject._constants:
                 setattr(clsobject, name, ConstField(name=name))
-            elif name in clsobject._enums.keys():
+            elif name in clsobject._enums:
                 setattr(clsobject, name, EnumField(name=name))
                 setattr(clsobject, f"_{name}", BinField(name=f"_{name}"))
             else:
@@ -148,8 +148,8 @@ class Binmap(metaclass=BinmapMetaclass):
 
         bound = self.__signature__.bind(*args, **kwargs)
         for param in self.__signature__.parameters.values():
-            if param.name in bound.arguments.keys():
-                if param.name in self._constants.keys():
+            if param.name in bound.arguments:
+                if param.name in self._constants:
                     raise AttributeError(f"{param.name} is a constant")
                 setattr(self, param.name, bound.arguments[param.name])
             else:
@@ -157,7 +157,7 @@ class Binmap(metaclass=BinmapMetaclass):
                     if param.name in bound.arguments:
                         self._binarydata = bound.arguments[param.name]
                         self._unpacker(bound.arguments[param.name])
-                elif param.name in self._constants.keys():
+                elif param.name in self._constants:
                     self.__dict__[param.name] = self._constants[param.name]
                 elif self._datafields[param.name] in "BbHhIiLlQq":
                     setattr(self, param.name, 0)
@@ -180,7 +180,7 @@ class Binmap(metaclass=BinmapMetaclass):
             field for field in self._datafields.keys() if not field.startswith("_pad")
         ]
         for arg, name in zip(args, datafields):
-            if name in self._constants.keys():
+            if name in self._constants:
                 if arg != self._constants[name]:
                     raise ValueError("Constant doesn't match binary data")
             else:
@@ -192,7 +192,7 @@ class Binmap(metaclass=BinmapMetaclass):
         datas = []
         for var in self._datafields.keys():
             if not var.startswith("_pad"):
-                if var in self._enums.keys():
+                if var in self._enums:
                     datas.append(getattr(self, f"_{var}"))
                 else:
                     datas.append(getattr(self, var))
