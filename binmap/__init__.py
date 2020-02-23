@@ -122,6 +122,8 @@ class Binmap(metaclass=BinmapMetaclass):
 
     """
 
+    #: _byteorder: charcter with byteorder
+    _byteorder = ">"
     #: _datafields: dict with variable name as key and :py:class:`struct` `format strings`_ as value
     _datafields = {}
     #: _enums: dict of dicts containing maps of strings
@@ -131,7 +133,7 @@ class Binmap(metaclass=BinmapMetaclass):
     _constants = {}
 
     def __init__(self, *args, binarydata=None, **kwargs):
-        self._formatstring = ""
+        self._formatstring = self._byteorder
         for fmt in self._datafields.values():
             self._formatstring += fmt
 
@@ -144,7 +146,7 @@ class Binmap(metaclass=BinmapMetaclass):
             else:
                 if param.name in self._constants.keys():
                     self.__dict__[param.name] = self._constants[param.name]
-                elif self._datafields[param.name] in "BbHhIiLlQqNnP":
+                elif self._datafields[param.name] in "BbHhIiLlQq":
                     setattr(self, param.name, 0)
                 elif self._datafields[param.name] in "efd":
                     setattr(self, param.name, 0.0)

@@ -60,6 +60,36 @@ def test_different_classes_eq():
     assert t.temp == th.temp
 
 
+class Bigendian(binmap.Binmap):
+    _datafields = {"value": "q"}
+
+
+class Littleedian(binmap.Binmap):
+    _byteorder = "<"
+    _datafields = {"value": "q"}
+
+
+def test_dataformats():
+
+    be = Bigendian(value=-10)
+    le = Littleedian(value=-10)
+
+    assert be.value == le.value
+    assert be.binarydata == b"\xff\xff\xff\xff\xff\xff\xff\xf6"
+    assert le.binarydata == b"\xf6\xff\xff\xff\xff\xff\xff\xff"
+
+    assert be.binarydata != le.binarydata
+
+    be.binarydata = b"\xff\xff\xff\xff\xf4\xff\xff\xf6"
+    le.binarydata = b"\xff\xff\xff\xff\xf4\xff\xff\xf6"
+
+    assert be.value == -184549386
+    assert le.value == -648518393585991681
+
+    assert be.value != le.value
+    assert be.binarydata == le.binarydata
+
+
 class TestTempClass:
     def test_with_argument(self):
         t = Temp(temp=10)
@@ -341,14 +371,11 @@ class AllDatatypes(binmap.Binmap):
         "unsignedlong": "L",
         "longlong": "q",
         "unsignedlonglong": "Q",
-        "ssize_t": "n",
-        "size_t": "N",
         "halffloat": "e",
         "floating": "f",
         "double": "d",
         "string": "10s",
         "pascalstring": "15p",
-        "pointer": "P",
     }
 
 
@@ -371,14 +398,11 @@ class TestAllDatatypes:
             unsignedlong=2212,
             longlong=-1212,
             unsignedlonglong=4444,
-            ssize_t=15,
-            size_t=22,
             halffloat=3.5,
             floating=3e3,
             double=13e23,
             string=b"helloworld",
             pascalstring=b"hello pascal",
-            pointer=0xFCE2,
         )
         assert sc.char == b"%"
         assert sc.signedchar == -2
@@ -392,28 +416,24 @@ class TestAllDatatypes:
         assert sc.unsignedlong == 2212
         assert sc.longlong == -1212
         assert sc.unsignedlonglong == 4444
-        assert sc.ssize_t == 15
-        assert sc.size_t == 22
         assert sc.halffloat == 3.5
         assert sc.floating == 3e3
         assert sc.double == 13e23
         assert sc.string == b"helloworld"
         assert sc.pascalstring == b"hello pascal"
-        assert sc.pointer == 0xFCE2
+        print(sc.binarydata)
         assert (
             sc.binarydata
-            == b"\x00%\xfe\x05\x01\x00\xf9\xff\x11\x00\x00\x00\xf1\xff\xff\xff\x0b\x00\x00\x00\x00\x00\x00\x00\xf8\xf6\xff\xff\xff\xff\xff\xff\xa4\x08"
-            b"\x00\x00\x00\x00\x00\x00D\xfb\xff\xff\xff\xff\xff\xff\\\x11\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00\x00\x00\x00"
-            b"\x00\x00\x00C\x00\x00\x00\x80;E\xe8\x0cgB\x924\xf1Dhelloworld\x0chello pascal\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe2\xfc\x00\x00\x00\x00\x00\x00"
+            == b"\x00%\xfe\x05\x01\xff\xf9\x00\x11\xff\xff\xff\xf1\x00\x00\x00\x0b\xff\xff\xf6\xf8\x00\x00"
+            b"\x08\xa4\xff\xff\xff\xff\xff\xff\xfbD\x00\x00\x00\x00\x00\x00\x11\\C\x00E;\x80\x00D\xf14\x92Bg\x0c"
+            b"\xe8helloworld\x0chello pascal\x00\x00"
         )
 
     def test_with_binarydata(self):
         sc = AllDatatypes(
-            binarydata=b"\x0fW\xee\x15\x00\x00\xf9\xf4\x11\x10\x00\x00\x31\xff\xff\xff\x0b\x01\x00\x00\x00\x00\x00\x00"
-            b"\xf8\xe6\xff\xff\xff\xff\xff\xff\xa4\x18\x00\x00\x00\x00\x00\x00E\xfb\xff\xff\xff\xff\xff\xff\\\x11\x01"
-            b"\x00\x00\x00\x00\x00\x1f\x00\x00\x00\x00\x00\x00\x00\x26\x00\x00\x00\x00\x00\x00"
-            b"\x00\x01C\x00\x00\x00\x81;E\xe8\x0cgB\xa24\xf1Dhi world  \x09hi pascal\x00\x00"
-            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe3\xfc\x00\x00\x00\x00\x00\x00"
+            binarydata=b"\x00W\xee\x15\x00\xf4\xf9\x10\x11\xff\xff\xff1\x00\x00\x01\x0b\xff\xff\xe6\xf8\x00\x00\x18"
+            b"\xa4\xff\xff\xff\xff\xff\xff\xfbE\x00\x00\x00\x00\x00\x01\x11\\C\x01E;\x81\x00D\xf14\xa2Bg\x0c"
+            b"\xe8hi world  \x09hi pascal\x00\x00\x00\x00\x00"
         )
         assert sc.char == b"W"
         assert sc.signedchar == -18
@@ -427,11 +447,8 @@ class TestAllDatatypes:
         assert sc.unsignedlong == 6308
         assert sc.longlong == -1211
         assert sc.unsignedlonglong == 69980
-        assert sc.ssize_t == 31
-        assert sc.size_t == 38
         assert sc.halffloat == 3.501953125
         assert sc.floating == 3000.0625
         assert sc.double == 1.3000184467440736e24
         assert sc.string == b"hi world  "
         assert sc.pascalstring == b"hi pascal"
-        assert sc.pointer == 0xFCE3
