@@ -75,19 +75,19 @@ def test_dataformats():
     le = Littleedian(value=-10)
 
     assert be.value == le.value
-    assert be.binarydata == b"\xff\xff\xff\xff\xff\xff\xff\xf6"
-    assert le.binarydata == b"\xf6\xff\xff\xff\xff\xff\xff\xff"
+    assert bytes(be) == b"\xff\xff\xff\xff\xff\xff\xff\xf6"
+    assert bytes(le) == b"\xf6\xff\xff\xff\xff\xff\xff\xff"
 
-    assert be.binarydata != le.binarydata
+    assert bytes(be) != bytes(le)
 
-    be.binarydata = b"\xff\xff\xff\xff\xf4\xff\xff\xf6"
-    le.binarydata = b"\xff\xff\xff\xff\xf4\xff\xff\xf6"
+    be.frombytes(b"\xff\xff\xff\xff\xf4\xff\xff\xf6")
+    le.frombytes(b"\xff\xff\xff\xff\xf4\xff\xff\xf6")
 
     assert be.value == -184549386
     assert le.value == -648518393585991681
 
     assert be.value != le.value
-    assert be.binarydata == le.binarydata
+    assert bytes(be) == bytes(le)
 
 
 class TestTempClass:
@@ -99,7 +99,7 @@ class TestTempClass:
     def test_without_argument(self):
         t = Temp()
         assert t.temp == 0
-        assert t.binarydata == struct.pack("B", 0)
+        assert bytes(t) == b"\x00"
 
     def test_unknown_argument(self):
         with pytest.raises(TypeError) as excinfo:
@@ -109,24 +109,24 @@ class TestTempClass:
     def test_value(self):
         t = Temp()
         t.temp = 10
-        assert t.binarydata == struct.pack("B", 10)
+        assert bytes(t) == b"\x0a"
 
     def test_raw(self):
-        t = Temp(binarydata=struct.pack("B", 10))
+        t = Temp(binarydata=b"\x0a")
         assert t.temp == 10
 
     def test_update_binarydata(self):
-        t = Temp(binarydata=struct.pack("B", 10))
+        t = Temp(binarydata=b"\x0a")
         assert t.temp == 10
-        t.binarydata = struct.pack("B", 20)
+        t.frombytes(b"\x14")
         assert t.temp == 20
 
     def test_change_value(self):
         t = Temp(temp=10)
-        assert t.binarydata == struct.pack("B", 10)
+        assert bytes(t) == b"\x0a"
 
         t.temp = 20
-        assert t.binarydata == struct.pack("B", 20)
+        assert bytes(t) == b"\x14"
 
     def test_value_bounds(self):
         t = Temp()
@@ -162,10 +162,10 @@ class TestTempHumClass:
         th = TempHum()
         assert th.temp == 0
         assert th.humidity == 0
-        assert th.binarydata == struct.pack("BB", 0, 0)
+        assert bytes(th) == b"\x00\x00"
 
     def test_raw(self):
-        th = TempHum(binarydata=struct.pack("BB", 10, 70))
+        th = TempHum(binarydata=b"\x0a\x46")
         assert th.temp == 10
         assert th.humidity == 70
 
@@ -175,7 +175,7 @@ class TestTempHumClass:
         th.humidity = 30
         assert th.temp == 30
         assert th.humidity == 30
-        assert th.binarydata == struct.pack("BB", 30, 30)
+        assert bytes(th) == b"\x1e\x1e"
 
     def test_compare_equal(self):
         th1 = TempHum(temp=10, humidity=70)
@@ -221,7 +221,7 @@ class TestPadClass:
         assert str(p) == "Pad, temp=10, humidity=60"
 
     def test_parse_data(self):
-        p = Pad(binarydata=struct.pack("BxxB", 10, 60))
+        p = Pad(binarydata=b"\x0a\x10\x20\x3c")
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert p.temp == 10
@@ -232,7 +232,7 @@ class TestPadClass:
         p = Pad()
         p.temp = 10
         p.humidity = 60
-        assert p.binarydata == struct.pack("BxxB", 10, 60)
+        assert bytes(p) == b"\x0a\x00\x00\x3c"
 
     def test_advanced_pad(self):
         p = AdvancedPad(temp=10, humidity=60)
@@ -249,7 +249,7 @@ class TestPadClass:
         assert p.humidity == 60
 
     def test_advanced_parse_data(self):
-        p = AdvancedPad(binarydata=struct.pack("BxxB4x", 10, 60))
+        p = AdvancedPad(binarydata=b"\n\x00\x00<\x00\x00\x00\x00")
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert "Padding (_pad1) is not readable" in str(excinfo)
@@ -264,7 +264,7 @@ class TestPadClass:
         p = AdvancedPad()
         p.temp = 10
         p.humidity = 60
-        assert p.binarydata == struct.pack("BxxB4x", 10, 60)
+        assert bytes(p) == b"\n\x00\x00<\x00\x00\x00\x00"
 
 
 class EnumClass(binmap.Binmap):
@@ -288,14 +288,14 @@ class TestEnumClass:
         assert str(pc) == "EnumClass, temp=10, wind=South"
 
     def test_enum_binary(self):
-        pc = EnumClass(binarydata=struct.pack("BB", 10, 2))
+        pc = EnumClass(binarydata=b"\x0a\x02")
         assert pc.wind == "South"
         assert str(pc) == "EnumClass, temp=10, wind=South"
 
     def test_set_named_enum(self):
         pc = EnumClass()
         pc.wind = "South"
-        assert pc.binarydata == struct.pack("BB", 0, 2)
+        assert bytes(pc) == b"\x00\x02"
 
         with pytest.raises(ValueError) as excinfo:
             pc.wind = "Norhtwest"
@@ -341,7 +341,7 @@ class TestConstValues:
         assert "datatype is a constant" in str(excinfo)
         assert c.datatype == 0x15
         assert c.status == 1
-        assert c.binarydata == b"\x15\x01"
+        assert bytes(c) == b"\x15\x01"
 
     def test_binary_data(self):
         c = ConstValues(binarydata=b"\x15\x01")
@@ -418,7 +418,7 @@ class TestAllDatatypes:
         assert sc.string == b"helloworld"
         assert sc.pascalstring == b"hello pascal"
         assert (
-            sc.binarydata
+            bytes(sc)
             == b"\x00%\xfe\x05\x01\xff\xf9\x00\x11\xff\xff\xff\xf1\x00\x00\x00\x0b\xff\xff\xf6\xf8\x00\x00"
             b"\x08\xa4\xff\xff\xff\xff\xff\xff\xfbD\x00\x00\x00\x00\x00\x00\x11\\C\x00E;\x80\x00D\xf14\x92Bg\x0c"
             b"\xe8helloworld\x0chello pascal\x00\x00"

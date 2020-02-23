@@ -173,8 +173,7 @@ class Binmap(metaclass=BinmapMetaclass):
             else:
                 setattr(self, name, arg)
 
-    @property
-    def binarydata(self):
+    def __bytes__(self):
         """packs or unpacks all variables to a binary structure defined by
         _datafields' format values"""
         datas = []
@@ -186,8 +185,7 @@ class Binmap(metaclass=BinmapMetaclass):
                     datas.append(getattr(self, var))
         return struct.pack(self._formatstring, *datas)
 
-    @binarydata.setter
-    def binarydata(self, value):
+    def frombytes(self, value):
         self._unpacker(value)
         self._binarydata = value
 
