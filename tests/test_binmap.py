@@ -112,11 +112,11 @@ class TestTempClass:
         assert bytes(t) == b"\x0a"
 
     def test_raw(self):
-        t = Temp(binarydata=b"\x0a")
+        t = Temp(b"\x0a")
         assert t.temp == 10
 
     def test_update_binarydata(self):
-        t = Temp(binarydata=b"\x0a")
+        t = Temp(b"\x0a")
         assert t.temp == 10
         t.frombytes(b"\x14")
         assert t.temp == 20
@@ -165,7 +165,7 @@ class TestTempHumClass:
         assert bytes(th) == b"\x00\x00"
 
     def test_raw(self):
-        th = TempHum(binarydata=b"\x0a\x46")
+        th = TempHum(b"\x0a\x46")
         assert th.temp == 10
         assert th.humidity == 70
 
@@ -221,7 +221,7 @@ class TestPadClass:
         assert str(p) == "Pad, temp=10, humidity=60"
 
     def test_parse_data(self):
-        p = Pad(binarydata=b"\x0a\x10\x20\x3c")
+        p = Pad(b"\x0a\x10\x20\x3c")
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert p.temp == 10
@@ -249,7 +249,7 @@ class TestPadClass:
         assert p.humidity == 60
 
     def test_advanced_parse_data(self):
-        p = AdvancedPad(binarydata=b"\n\x00\x00<\x00\x00\x00\x00")
+        p = AdvancedPad(b"\n\x00\x00<\x00\x00\x00\x00")
         with pytest.raises(AttributeError) as excinfo:
             p._pad1
         assert "Padding (_pad1) is not readable" in str(excinfo)
@@ -288,7 +288,7 @@ class TestEnumClass:
         assert str(pc) == "EnumClass, temp=10, wind=South"
 
     def test_enum_binary(self):
-        pc = EnumClass(binarydata=b"\x0a\x02")
+        pc = EnumClass(b"\x0a\x02")
         assert pc.wind == "South"
         assert str(pc) == "EnumClass, temp=10, wind=South"
 
@@ -344,9 +344,9 @@ class TestConstValues:
         assert bytes(c) == b"\x15\x01"
 
     def test_binary_data(self):
-        c = ConstValues(binarydata=b"\x15\x01")
+        c = ConstValues(b"\x15\x01")
         with pytest.raises(ValueError) as excinfo:
-            ConstValues(binarydata=b"\x14\x01")
+            ConstValues(b"\x14\x01")
         assert "Constant doesn't match binary data" in str(excinfo)
         assert c.datatype == 0x15
         assert c.status == 1
@@ -426,7 +426,7 @@ class TestAllDatatypes:
 
     def test_with_binarydata(self):
         sc = AllDatatypes(
-            binarydata=b"\x00W\xee\x15\x00\xf4\xf9\x10\x11\xff\xff\xff1\x00\x00\x01\x0b\xff\xff\xe6\xf8\x00\x00\x18"
+            b"\x00W\xee\x15\x00\xf4\xf9\x10\x11\xff\xff\xff1\x00\x00\x01\x0b\xff\xff\xe6\xf8\x00\x00\x18"
             b"\xa4\xff\xff\xff\xff\xff\xff\xfbE\x00\x00\x00\x00\x00\x01\x11\\C\x01E;\x81\x00D\xf14\xa2Bg\x0c"
             b"\xe8hi world  \x09hi pascal\x00\x00\x00\x00\x00"
         )

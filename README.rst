@@ -13,10 +13,10 @@ Temperature with one unsigned byte:
 
     t = Temperature()
     t.temp = 22
-    print(t.binarydata)
+    print(bytes(t))
     b'\\x16'
 
-    t2 = Temperature(binarydata=b'\\x20')
+    t2 = Temperature(b'\\x20')
     print(t2.temp)
     32
 
@@ -31,10 +31,10 @@ one unsiged byte for humidity:
     th = TempHum()
     th.temp = -10
     th.humidity = 60
-    print(th.binarydata)
+    print(bytes(th))
     b'\\xfc<'
 
-    th2 = TempHum(binarydata=b'\\xea\\x41')
+    th2 = TempHum(b'\\xea\\x41')
     print(th2.temp)
     -22
     print(th2.hum)
