@@ -47,12 +47,13 @@ class EnumField(BaseDescriptor):
     def __set__(self, obj, value):
         if value in obj._enums[self.name]:
             obj.__dict__[f"_{self.name}"] = value
-        for k, v in obj._enums[self.name].items():
-            if v == value:
-                obj.__dict__[f"_{self.name}"] = k
-                return
+        else:
+            for k, v in obj._enums[self.name].items():
+                if v == value:
+                    obj.__dict__[f"_{self.name}"] = k
+                    return
 
-        raise ValueError("Unknown enum or value")
+            raise ValueError("Unknown enum or value")
 
 
 class ConstField(BinField):
