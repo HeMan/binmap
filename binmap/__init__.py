@@ -77,8 +77,17 @@ class BinmapMetaclass(type):
         clsobject = super().__new__(cls, clsname, bases, clsdict)
         keys = clsobject._datafields.keys()
         sig = Signature(
-            Parameter(name, Parameter.KEYWORD_ONLY, default=Parameter.default)
-            for name in keys
+            [
+                Parameter(
+                    "binarydata",
+                    Parameter.POSITIONAL_OR_KEYWORD,
+                    default=Parameter.default,
+                )
+            ]
+            + [
+                Parameter(name, Parameter.KEYWORD_ONLY, default=Parameter.default)
+                for name in keys
+            ]
         )
         setattr(clsobject, "__signature__", sig)
         for enum in clsobject._enums:
@@ -117,7 +126,7 @@ class Binmap(metaclass=BinmapMetaclass):
         tw = TempWind()
         tw.temp = 3
         tw.wind = "South"
-        print(tw.binarydata)
+        print(bytes(tw))
         b'\\x03\\x02'
 
 
@@ -133,7 +142,7 @@ class Binmap(metaclass=BinmapMetaclass):
     #: the same value. It won't accept binary data with any other value
     _constants = {}
 
-    def __init__(self, *args, binarydata=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         self._formatstring = self._byteorder
         for fmt in self._datafields.values():
             self._formatstring += fmt
@@ -145,7 +154,11 @@ class Binmap(metaclass=BinmapMetaclass):
                     raise AttributeError(f"{param.name} is a constant")
                 setattr(self, param.name, bound.arguments[param.name])
             else:
-                if param.name in self._constants:
+                if param.name == "binarydata":
+                    if param.name in bound.arguments:
+                        self._binarydata = bound.arguments[param.name]
+                        self._unpacker(bound.arguments[param.name])
+                elif param.name in self._constants:
                     self.__dict__[param.name] = self._constants[param.name]
                 elif self._datafields[param.name] in "BbHhIiLlQq":
                     setattr(self, param.name, 0)
@@ -156,9 +169,9 @@ class Binmap(metaclass=BinmapMetaclass):
                 else:
                     setattr(self, param.name, b"")
 
-        if binarydata:
-            self._binarydata = binarydata
-            self._unpacker(binarydata)
+        if len(args) == 1:
+            self._binarydata = args[0]
+            self._unpacker(args[0])
         else:
             self._binarydata = ""
 
@@ -174,8 +187,7 @@ class Binmap(metaclass=BinmapMetaclass):
             else:
                 setattr(self, name, arg)
 
-    @property
-    def binarydata(self):
+    def __bytes__(self):
         """packs or unpacks all variables to a binary structure defined by
         _datafields' format values"""
         datas = []
@@ -187,8 +199,7 @@ class Binmap(metaclass=BinmapMetaclass):
                     datas.append(getattr(self, var))
         return struct.pack(self._formatstring, *datas)
 
-    @binarydata.setter
-    def binarydata(self, value):
+    def frombytes(self, value):
         self._unpacker(value)
         self._binarydata = value
 
