@@ -149,21 +149,22 @@ class Binmap(metaclass=BinmapMetaclass):
         bound = self.__signature__.bind(*args, **kwargs)
         for param in self.__signature__.parameters.values():
             if param.name in bound.arguments:
-                if param.name in self._constants:
-                    raise AttributeError(f"{param.name} is a constant")
-                setattr(self, param.name, bound.arguments[param.name])
-            else:
                 if param.name == "binarydata":
-                    if param.name in bound.arguments:
-                        self._binarydata = bound.arguments[param.name]
-                        self._unpacker(bound.arguments[param.name])
+                    self._binarydata = bound.arguments[param.name]
+                    self._unpacker(bound.arguments[param.name])
                 elif param.name in self._constants:
-                    self.__dict__[param.name] = self._constants[param.name]
-                elif self._datafields[param.name] in "BbHhIiLlQq":
+                    raise AttributeError(f"{param.name} is a constant")
+                else:
+                    setattr(self, param.name, bound.arguments[param.name])
+            elif param.name in self._constants:
+                self.__dict__[param.name] = self._constants[param.name]
+            else:
+                val = self._datafields[param.name]
+                if val in "BbHhIiLlQq":
                     setattr(self, param.name, 0)
-                elif self._datafields[param.name] in "efd":
+                if val in "efd":
                     setattr(self, param.name, 0.0)
-                elif self._datafields[param.name] == "c":
+                if val == "c":
                     setattr(self, param.name, b"\x00")
                 else:
                     setattr(self, param.name, b"")
