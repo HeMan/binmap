@@ -157,7 +157,7 @@ class Binmap(metaclass=BinmapMetaclass):
                 else:
                     setattr(self, param.name, bound.arguments[param.name])
             elif param.name != "binarydata":
-                elif param.name in self._constants:
+                if param.name in self._constants:
                     self.__dict__[param.name] = self._constants[param.name]
                 elif self._datafields[param.name] in "BbHhIiLlQq":
                     setattr(self, param.name, 0)
