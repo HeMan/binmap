@@ -156,16 +156,17 @@ class Binmap(metaclass=BinmapMetaclass):
                     raise AttributeError(f"{param.name} is a constant")
                 else:
                     setattr(self, param.name, bound.arguments[param.name])
-            elif param.name in self._constants:
-                self.__dict__[param.name] = self._constants[param.name]
-            elif self._datafields[param.name] in "BbHhIiLlQq":
-                setattr(self, param.name, 0)
-            elif self._datafields[param.name] in "efd":
-                setattr(self, param.name, 0.0)
-            elif self._datafields[param.name] == "c":
-                setattr(self, param.name, b"\x00")
-            else:
-                setattr(self, param.name, b"")
+            elif param.name != "binarydata":
+                elif param.name in self._constants:
+                    self.__dict__[param.name] = self._constants[param.name]
+                elif self._datafields[param.name] in "BbHhIiLlQq":
+                    setattr(self, param.name, 0)
+                elif self._datafields[param.name] in "efd":
+                    setattr(self, param.name, 0.0)
+                elif self._datafields[param.name] == "c":
+                    setattr(self, param.name, b"\x00")
+                else:
+                    setattr(self, param.name, b"")
 
         if len(args) == 1:
             self._binarydata = args[0]
