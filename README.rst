@@ -2,7 +2,7 @@ Class for go to and from binary data
 
 
 It's designed to be easy to create mappings by just having a
-``_datafields`` classs attribute.
+``_datafields`` class attribute.
 
 Temperature with one unsigned byte:
 
@@ -14,9 +14,9 @@ Temperature with one unsigned byte:
     t = Temperature()
     t.temp = 22
     print(bytes(t))
-    b'\\x16'
+    b'\x16'
 
-    t2 = Temperature(b'\\x20')
+    t2 = Temperature(b'\x20')
     print(t2.temp)
     32
 
@@ -32,9 +32,9 @@ one unsiged byte for humidity:
     th.temp = -10
     th.humidity = 60
     print(bytes(th))
-    b'\\xfc<'
+    b'\xfc<'
 
-    th2 = TempHum(b'\\xea\\x41')
+    th2 = TempHum(b'\xea\x41')
     print(th2.temp)
     -22
     print(th2.hum)
