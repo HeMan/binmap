@@ -47,11 +47,12 @@ class EnumField(BaseDescriptor):
     def __set__(self, obj, value):
         if value in obj._enums[self.name]:
             obj.__dict__[f"_{self.name}"] = value
-        elif value in obj._enums[self.name].values():
+        else:
             for k, v in obj._enums[self.name].items():
                 if v == value:
                     obj.__dict__[f"_{self.name}"] = k
-        else:
+                    return
+
             raise ValueError("Unknown enum or value")
 
 
@@ -89,7 +90,7 @@ class BinmapMetaclass(type):
             ]
         )
         setattr(clsobject, "__signature__", sig)
-        for enum in clsobject._enums.keys():
+        for enum in clsobject._enums:
             for value, const in clsobject._enums[enum].items():
                 if hasattr(clsobject, const.upper()):
                     raise ValueError(f"{const} already defined")
@@ -177,7 +178,7 @@ class Binmap(metaclass=BinmapMetaclass):
     def _unpacker(self, value):
         args = struct.unpack(self._formatstring, value)
         datafields = [
-            field for field in self._datafields.keys() if not field.startswith("_pad")
+            field for field in self._datafields if not field.startswith("_pad")
         ]
         for arg, name in zip(args, datafields):
             if name in self._constants:
@@ -190,7 +191,7 @@ class Binmap(metaclass=BinmapMetaclass):
         """packs or unpacks all variables to a binary structure defined by
         _datafields' format values"""
         datas = []
-        for var in self._datafields.keys():
+        for var in self._datafields:
             if not var.startswith("_pad"):
                 if var in self._enums:
                     datas.append(getattr(self, f"_{var}"))
@@ -205,7 +206,7 @@ class Binmap(metaclass=BinmapMetaclass):
     def __eq__(self, other):
         if self.__signature__ != other.__signature__:
             return False
-        for field in self._datafields.keys():
+        for field in self._datafields:
             v1 = getattr(self, field)
             v2 = getattr(other, field)
             if v1 != v2:
@@ -215,7 +216,7 @@ class Binmap(metaclass=BinmapMetaclass):
     def __str__(self):
         retval = f"{self.__class__.__name__}"
         if self._datafields:
-            for key in self._datafields.keys():
+            for key in self._datafields:
                 if not key.startswith("_pad"):
                     retval += ", %s=%s" % (key, getattr(self, key))
         return retval
