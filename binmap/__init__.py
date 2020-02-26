@@ -178,21 +178,15 @@ class Binmap(metaclass=BinmapMetaclass):
 
     def _unpacker(self, value):
         args = struct.unpack(self._formatstring, value)
-        print(self._formatstring)
-        print(args)
         datafields = [
             field for field in self._datafields.keys() if not field.startswith("_pad")
         ]
         for arg, name in zip(args, datafields):
-            print(arg, name)
             if name in self._constants:
-                print("Whoops!")
                 if arg != self._constants[name]:
                     raise ValueError("Constant doesn't match binary data")
             else:
-                print("Setting attr")
                 setattr(self, name, arg)
-                print(getattr(self, name))
 
     def __bytes__(self):
         """packs or unpacks all variables to a binary structure defined by
