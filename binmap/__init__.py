@@ -147,11 +147,13 @@ class Binmap(metaclass=BinmapMetaclass):
             self._formatstring += fmt
 
         bound = self.__signature__.bind(*args, **kwargs)
+
+        if "binarydata" in bound.arguments:
+            self._binarydata = bound.arguments["binarydata"]
+            self._unpacker(self._binarydata)
+
         for param in self.__signature__.parameters.values():
             if param.name in bound.arguments:
-                if param.name == "binarydata":
-                    self._binarydata = bound.arguments["binarydata"]
-                    self._unpacker(self._binarydata)
                 if param.name in self._constants:
                     raise AttributeError(f"{param.name} is a constant")
                 else:
@@ -172,7 +174,7 @@ class Binmap(metaclass=BinmapMetaclass):
             self._binarydata = args[0]
             self._unpacker(self._binarydata)
         else:
-            self._binarydata = ""
+            self._binarydata = b""
 
     def _unpacker(self, value):
         args = struct.unpack(self._formatstring, value)
