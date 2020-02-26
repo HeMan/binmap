@@ -150,9 +150,9 @@ class Binmap(metaclass=BinmapMetaclass):
         for param in self.__signature__.parameters.values():
             if param.name in bound.arguments:
                 if param.name == "binarydata":
-                    self._binarydata = bound.arguments[param.name]
-                    self._unpacker(bound.arguments[param.name])
-                elif param.name in self._constants:
+                    self._binarydata = bound.arguments["binarydata"]
+                    self._unpacker(self._binarydata)
+                if param.name in self._constants:
                     raise AttributeError(f"{param.name} is a constant")
                 else:
                     setattr(self, param.name, bound.arguments[param.name])
@@ -160,31 +160,37 @@ class Binmap(metaclass=BinmapMetaclass):
                 if param.name in self._constants:
                     self.__dict__[param.name] = self._constants[param.name]
                 elif self._datafields[param.name] in "BbHhIiLlQq":
-                    setattr(self, param.name, 0)
+                    setattr(self, param.name, getattr(self, param.name, 0))
                 elif self._datafields[param.name] in "efd":
-                    setattr(self, param.name, 0.0)
+                    setattr(self, param.name, getattr(self, param.name, 0.0))
                 elif self._datafields[param.name] == "c":
-                    setattr(self, param.name, b"\x00")
+                    setattr(self, param.name, getattr(self, param.name,  b"\x00"))
                 else:
-                    setattr(self, param.name, b"")
+                    setattr(self, param.name, getattr(self, param.name,  b""))
 
         if len(args) == 1:
             self._binarydata = args[0]
-            self._unpacker(args[0])
+            self._unpacker(self._binarydata)
         else:
             self._binarydata = ""
 
     def _unpacker(self, value):
         args = struct.unpack(self._formatstring, value)
+        print(self._formatstring)
+        print(args)
         datafields = [
             field for field in self._datafields.keys() if not field.startswith("_pad")
         ]
         for arg, name in zip(args, datafields):
+            print(arg, name)
             if name in self._constants:
+                print("Whoops!")
                 if arg != self._constants[name]:
                     raise ValueError("Constant doesn't match binary data")
             else:
+                print("Setting attr")
                 setattr(self, name, arg)
+                print(getattr(self, name))
 
     def __bytes__(self):
         """packs or unpacks all variables to a binary structure defined by
