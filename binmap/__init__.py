@@ -1,3 +1,4 @@
+import dataclasses
 import struct
 from inspect import Parameter, Signature
 
@@ -7,7 +8,7 @@ class BaseDescriptor:
 
     :param name: Variable name"""
 
-    def __init__(self, name):
+    def __set_name__(self, obj, name):
         self.name = name
 
 
@@ -25,6 +26,11 @@ class BinField(BaseDescriptor):
 
 class PaddingField(BaseDescriptor):
     """PaddingField descriptor is used to "pad" data with values unused for real data"""
+
+    def __init__(self):
+        self.metadata = {"format": "x"}
+        self.default = 0
+        self.default_factory = dataclasses.MISSING
 
     def __get__(self, obj, owner):
         """Getting values fails"""
@@ -60,7 +66,10 @@ class ConstField(BinField):
     """ConstField descriptor keeps it's value"""
 
     def __set__(self, obj, value):
-        raise AttributeError(f"{self.name} is a constant")
+        if self.name in obj.__dict__:
+            raise AttributeError(f"{self.name} is a constant")
+        else:
+            obj.__dict__[self.name] == value
 
 
 class BinmapMetaclass(type):
@@ -97,14 +106,14 @@ class BinmapMetaclass(type):
                 setattr(clsobject, const.upper(), value)
         for name in keys:
             if name.startswith("_pad"):
-                setattr(clsobject, name, PaddingField(name=name))
+                setattr(clsobject, name, PaddingField())
             elif name in clsobject._constants:
-                setattr(clsobject, name, ConstField(name=name))
+                setattr(clsobject, name, ConstField())
             elif name in clsobject._enums:
-                setattr(clsobject, name, EnumField(name=name))
-                setattr(clsobject, f"_{name}", BinField(name=f"_{name}"))
+                setattr(clsobject, name, EnumField())
+                # setattr(clsobject, f"_{name}", BinField(name=f"_{name}"))
             else:
-                setattr(clsobject, name, BinField(name=name))
+                setattr(clsobject, name, BinField())
         return clsobject
 
 
@@ -223,3 +232,63 @@ class Binmap(metaclass=BinmapMetaclass):
                 if not key.startswith("_pad"):
                     retval += ", %s=%s" % (key, getattr(self, key))
         return retval
+
+
+@dataclasses.dataclass
+class BinmapDataclass:
+    _byteorder = ""
+    __binarydata: dataclasses.InitVar[int] = b""
+
+    def __init_subclass__(cls, byteorder=">"):
+        cls._byteorder = byteorder
+
+    def __bytes__(self):
+        return struct.pack(
+            self._formatstring,
+            *(
+                v
+                for k, v in self.__dict__.items()
+                if k not in ["_byteorder", "_formatstring", "_binarydata"]
+            ),
+            # *(v for k, v in self.__dict__.items()),
+        )
+
+    def __post_init__(self, _binarydata):
+        formatstring = self._byteorder
+        for variable in self.__dict__.keys():
+            if "format" in self.__dataclass_fields__[variable].metadata:
+                formatstring += self.__dataclass_fields__[variable].metadata["format"]
+        setattr(self, "_formatstring", formatstring)
+        if _binarydata != b"":
+            self._unpacker(_binarydata)
+
+    def _unpacker(self, value):
+        args = struct.unpack(self._formatstring, value)
+        datafields = [f for f in self.__dict__ if not f.startswith("_")]
+        for arg, name in zip(args, datafields):
+            setattr(self, name, arg)
+
+    def frombytes(self, value):
+        self._unpacker(value)
+        self._binarydata = value
+
+
+def field(formatstring, default=None):
+    if default:
+        return dataclasses.field(default=default)
+    if formatstring in "BbHhIiLlQq":
+        default = 0
+    elif formatstring in "efd":
+        default = 0.0
+    elif formatstring == "c":
+        default = b"\x00"
+    else:
+        default = ""
+    return dataclasses.field(default=default, metadata={"format": formatstring})
+def enum(formatstring, enums):
+    return dataclasses.field(default=None)
+
+
+def const(formatstring, default):
+    value = ConstField()
+    return dataclasses.field(default=value, metadata={"format": formatstring},)
