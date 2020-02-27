@@ -138,7 +138,7 @@ class Binmap(metaclass=BinmapMetaclass):
     _datafields = {}
     #: _enums: dict of dicts containing maps of strings
     _enums = {}
-    #: _constans: dict of constants. This creates a variable that is allways
+    #: _constants: dict of constants. This creates a variable that is allways
     #: the same value. It won't accept binary data with any other value
     _constants = {}
 
@@ -154,22 +154,23 @@ class Binmap(metaclass=BinmapMetaclass):
             self._unpacker(self._binarydata)
 
         for param in self.__signature__.parameters.values():
+            if param.name == "binarydata":
+                continue
             if param.name in bound.arguments:
                 if param.name in self._constants:
                     raise AttributeError(f"{param.name} is a constant")
-                else:
-                    setattr(self, param.name, bound.arguments[param.name])
-            elif param.name != "binarydata":
-                if param.name in self._constants:
-                    self.__dict__[param.name] = self._constants[param.name]
-                elif self._datafields[param.name] in "BbHhIiLlQq":
-                    setattr(self, param.name, getattr(self, param.name, 0))
+                setattr(self, param.name, bound.arguments[param.name])
+            elif param.name in self._constants:
+                self.__dict__[param.name] = self._constants[param.name]
+            elif param.name not in self.__dict__:
+                if self._datafields[param.name] in "BbHhIiLlQq":
+                    setattr(self, param.name, 0)
                 elif self._datafields[param.name] in "efd":
-                    setattr(self, param.name, getattr(self, param.name, 0.0))
+                    setattr(self, param.name, 0.0)
                 elif self._datafields[param.name] == "c":
-                    setattr(self, param.name, getattr(self, param.name,  b"\x00"))
+                    setattr(self, param.name, b"\x00")
                 else:
-                    setattr(self, param.name, getattr(self, param.name,  b""))
+                    setattr(self, param.name, b"")
 
         if len(args) == 1:
             self._binarydata = args[0]
