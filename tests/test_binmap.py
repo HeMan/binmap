@@ -300,16 +300,18 @@ class TestEnumClass:
 
 @binmap.binmapdataclass
 class ConstValues(binmap.BinmapDataclass):
-    datatype: binmap.constant[binmap.unsignedchar] = 0x15
+    datatype: binmap.unsignedchar = binmap.constant(0x15)
     status: binmap.unsignedchar = 0
 
 
 class TestConstValues:
     def test_create_class(self):
         c = ConstValues()
-        with pytest.raises(AttributeError) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             ConstValues(datatype=0x14, status=1)
-        assert "datatype is a constant" in str(excinfo)
+        assert "__init__() got an unexpected keyword argument 'datatype'" in str(
+            excinfo
+        )
         assert c.datatype == 0x15
 
     def test_set_value(self):

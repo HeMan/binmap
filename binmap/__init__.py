@@ -78,13 +78,11 @@ class ConstField(BinField):
 unsignedchar = NewType("unsingedchar", int)
 longlong = NewType("longlong", int)
 pad = NewType("pad", int)
-constant = Tuple
 
 datatypemapping: Dict[type, Tuple[BaseDescriptor, str]] = {
     unsignedchar: (BinField, "B"),
     longlong: (BinField, "q"),
     pad: (PaddingField, "x"),
-    constant: (ConstField, "B"),
 }
 
 
@@ -93,13 +91,11 @@ def binmapdataclass(cls: Type[T]) -> Type[T]:
     type_hints = get_type_hints(cls)
 
     cls._formatstring = ""
-    # Used to list all fields and locate fields by field number.
+
     for field_ in dataclasses.fields(cls):
-        if getattr(field_.type, "__origin__", None) is tuple:
-            _, _type = datatypemapping[field_.type.__args__[0]]
+        _base, _type = datatypemapping[type_hints[field_.name]]
+        if "constant" in field_.metadata:
             _base = ConstField
-        else:
-            _base, _type = datatypemapping[type_hints[field_.name]]
         setattr(cls, field_.name, _base(name=field_.name))
         if type_hints[field_.name] is pad:
             _type = field_.default * _type
@@ -109,7 +105,11 @@ def binmapdataclass(cls: Type[T]) -> Type[T]:
 
 
 def padding(length=1):
-    return dataclasses.field(default=length, repr=False)
+    return dataclasses.field(default=length, repr=False, metadata={"padding": True})
+
+
+def constant(value):
+    return dataclasses.field(default=value, init=False, metadata={"constant": True})
 
 
 @dataclasses.dataclass
@@ -135,17 +135,29 @@ class BinmapDataclass(ABC):
     def __post_init__(self, _binarydata):
         if _binarydata != b"":
             self._unpacker(_binarydata)
+        # Kludgy hack to keep order
+        for f in dataclasses.fields(self):
+            if "padding" in f.metadata:
+                continue
+            if "constant" in f.metadata:
+                self.__dict__.update({f.name: f.default})
+            else:
+                val = getattr(self, f.name)
+                del self.__dict__[f.name]
+                self.__dict__.update({f.name: val})
 
     def _unpacker(self, value):
         type_hints = get_type_hints(self)
+        datafieldsmap = {f.name: f for f in dataclasses.fields(self)}
         datafields = [
-            f.name
-            for f in dataclasses.fields(self)
-            if not (type_hints[f.name] is pad)
-            and not (getattr(f.type, "__origin__", None))
+            f.name for f in dataclasses.fields(self) if not (type_hints[f.name] is pad)
         ]
         args = struct.unpack(self._byteorder + self._formatstring, value)
         for arg, name in zip(args, datafields):
+            if "constant" in datafieldsmap[name].metadata:
+                if arg != datafieldsmap[name].default:
+                    raise ValueError("Constant doesn't match binary data")
+
             setattr(self, name, arg)
 
     def frombytes(self, value):
