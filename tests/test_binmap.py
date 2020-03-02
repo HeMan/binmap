@@ -176,17 +176,17 @@ class TestTempHumClass:
 @binmap.binmapdataclass
 class Pad(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
-    pad: binmap.padding = 2
+    pad: binmap.pad = binmap.padding(2)
     humidity: binmap.unsignedchar = 0
 
 
 @binmap.binmapdataclass
 class AdvancedPad(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
-    _pad1: binmap.padding = 2
+    _pad1: binmap.pad = binmap.padding(2)
     humidity: binmap.unsignedchar = 0
-    _pad2: binmap.padding = 3
-    _pad3: binmap.padding = 1
+    _pad2: binmap.pad = binmap.padding(3)
+    _pad3: binmap.pad = binmap.padding(1)
 
 
 class TestPadClass:
@@ -220,10 +220,10 @@ class TestPadClass:
         assert "Padding (_pad1) is not readable" in str(excinfo)
         with pytest.raises(AttributeError) as excinfo:
             p._pad2
-        assert "Padding (_pad1) is not readable" in str(excinfo)
+        assert "Padding (_pad2) is not readable" in str(excinfo)
         with pytest.raises(AttributeError) as excinfo:
             p._pad3
-        assert "Padding (_pad1) is not readable" in str(excinfo)
+        assert "Padding (_pad3) is not readable" in str(excinfo)
         assert p.temp == 10
         assert p.humidity == 60
 

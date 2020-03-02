@@ -77,13 +77,13 @@ class ConstField(BinField):
 
 unsignedchar = NewType("unsingedchar", int)
 longlong = NewType("longlong", int)
-padding = NewType("padding", int)
+pad = NewType("pad", int)
 constant = Tuple
 
 datatypemapping: Dict[type, Tuple[BaseDescriptor, str]] = {
     unsignedchar: (BinField, "B"),
     longlong: (BinField, "q"),
-    padding: (PaddingField, "x"),
+    pad: (PaddingField, "x"),
     constant: (ConstField, "B"),
 }
 
@@ -101,11 +101,15 @@ def binmapdataclass(cls: Type[T]) -> Type[T]:
         else:
             _base, _type = datatypemapping[type_hints[field_.name]]
         setattr(cls, field_.name, _base(name=field_.name))
-        if type_hints[field_.name] is padding:
+        if type_hints[field_.name] is pad:
             _type = field_.default * _type
         cls._formatstring += _type
 
     return cls
+
+
+def padding(length=1):
+    return dataclasses.field(default=length, repr=False)
 
 
 @dataclasses.dataclass
@@ -137,7 +141,7 @@ class BinmapDataclass(ABC):
         datafields = [
             f.name
             for f in dataclasses.fields(self)
-            if not (type_hints[f.name] is padding)
+            if not (type_hints[f.name] is pad)
             and not (getattr(f.type, "__origin__", None))
         ]
         args = struct.unpack(self._byteorder + self._formatstring, value)
