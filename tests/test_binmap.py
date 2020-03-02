@@ -19,13 +19,11 @@ def test_baseclass_with_keyword():
 
 
 @binmap.binmapdataclass
-@dataclass
 class Temp(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
 
 
 @binmap.binmapdataclass
-@dataclass
 class TempHum(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     humidity: binmap.unsignedchar = 0
@@ -39,13 +37,11 @@ def test_different_classes_eq():
 
 
 @binmap.binmapdataclass
-@dataclass
 class Bigendian(binmap.BinmapDataclass):
     value: binmap.longlong = 0
 
 
 @binmap.binmapdataclass
-@dataclass
 class Littleedian(binmap.BinmapDataclass, byteorder="<"):
     value: binmap.longlong = 0
 
@@ -178,7 +174,6 @@ class TestTempHumClass:
 
 
 @binmap.binmapdataclass
-@dataclass
 class Pad(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     pad: binmap.padding = 2
@@ -186,7 +181,6 @@ class Pad(binmap.BinmapDataclass):
 
 
 @binmap.binmapdataclass
-@dataclass
 class AdvancedPad(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     _pad1: binmap.padding = 2
@@ -253,7 +247,6 @@ class TestPadClass:
 
 
 @binmap.binmapdataclass
-@dataclass
 class EnumClass(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     # wind: int = binmap.enum("h", {0: "North", 1: "East", 2: "South", 4: "West"})
@@ -306,7 +299,6 @@ class TestEnumClass:
 
 
 @binmap.binmapdataclass
-@dataclass
 class ConstValues(binmap.BinmapDataclass):
     datatype: binmap.constant[binmap.unsignedchar] = 0x15
     status: binmap.unsignedchar = 0

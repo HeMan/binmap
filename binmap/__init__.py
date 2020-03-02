@@ -89,7 +89,7 @@ datatypemapping: Dict[type, Tuple[BaseDescriptor, str]] = {
 
 
 def binmapdataclass(cls: Type[T]) -> Type[T]:
-
+    dataclasses.dataclass(cls)
     type_hints = get_type_hints(cls)
 
     cls._formatstring = ""
