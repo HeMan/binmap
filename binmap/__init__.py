@@ -75,13 +75,48 @@ class ConstField(BinField):
             obj.__dict__.update({self.name: value})
 
 
+char = NewType("char", int)
+signedchar = NewType("signedchar", int)
 unsignedchar = NewType("unsingedchar", int)
+boolean = NewType("boolean", bool)
+short = NewType("short", int)
+unsignedshort = NewType("short", int)
+integer = NewType("integer", int)
+unsignedinteger = NewType("unsignedinteger", int)
+long = NewType("long", int)
+unsignedlong = NewType("unsignedlog", int)
 longlong = NewType("longlong", int)
+unsignedlonglong = NewType("longlong", int)
+halffloat = NewType("halffloat", float)
+floating = NewType("floating", float)
+double = NewType("double", float)
+string = NewType("string", str)
+pascalstring = NewType("pascalstring", str)
 pad = NewType("pad", int)
 
 datatypemapping: Dict[type, Tuple[BaseDescriptor, str]] = {
+    char: (BinField, "c"),
+    chr: (BinField, "c"),
+    signedchar: (BinField, "b"),
     unsignedchar: (BinField, "B"),
+    boolean: (BinField, "?"),
+    bool: (BinField, "?"),
+    short: (BinField, "h"),
+    unsignedshort: (BinField, "H"),
+    integer: (BinField, "i"),
+    int: (BinField, "i"),
+    unsignedinteger: (BinField, "I"),
+    long: (BinField, "l"),
+    unsignedlong: (BinField, "L"),
     longlong: (BinField, "q"),
+    unsignedlonglong: (BinField, "Q"),
+    halffloat: (BinField, "e"),
+    floating: (BinField, "f"),
+    float: (BinField, "f"),
+    double: (BinField, "d"),
+    string: (BinField, "s"),
+    str: (BinField, "s"),
+    pascalstring: (BinField, "p"),
     pad: (PaddingField, "x"),
 }
 
@@ -99,17 +134,31 @@ def binmapdataclass(cls: Type[T]) -> Type[T]:
         setattr(cls, field_.name, _base(name=field_.name))
         if type_hints[field_.name] is pad:
             _type = field_.default * _type
+        if (
+            type_hints[field_.name] is string
+            or type_hints[field_.name] is pascalstring
+            or type_hints[field_.name] is str
+        ):
+            _type = str(field_.metadata["length"]) + _type
         cls._formatstring += _type
 
     return cls
 
 
-def padding(length=1):
+def padding(length: int = 1):
     return dataclasses.field(default=length, repr=False, metadata={"padding": True})
 
 
 def constant(value):
     return dataclasses.field(default=value, init=False, metadata={"constant": True})
+
+
+def stringfield(length: int = 1):
+    return dataclasses.field(default=b"\x00" * length, metadata={"length": length})
+
+
+def pascalstringfield(length=1):
+    return dataclasses.field(default=b"\x00" * length, metadata={"length": length})
 
 
 @dataclasses.dataclass

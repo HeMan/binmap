@@ -1,5 +1,4 @@
 import struct
-from dataclasses import dataclass
 
 import pytest
 
@@ -332,98 +331,97 @@ class TestConstValues:
         assert c.status == 1
 
 
-# @binmap.binmapdataclass
-# @dataclass
-# class AllDatatypes(binmap.BinmapDataclass):
-#    _pad: any = binmap.padding(1)
-#    char: int = binmap.field("c")
-#    signedchar: int = binmap.field("b")
-#    unsignedchar: int = binmap.field("B")
-#    boolean: bool = binmap.field("?")
-#    short: int = binmap.field("h")
-#    unsignedshort: int = binmap.field("H")
-#    integer: int = binmap.field("i")
-#    unsignedint: int = binmap.field("I")
-#    long: int = binmap.field("l")
-#    unsignedlong: int = binmap.field("L")
-#    longlong: int = binmap.field("q")
-#    unsignedlonglong: int = binmap.field("Q")
-#    halffloat: float = binmap.field("e")
-#    floating: float = binmap.field("f")
-#    double: float = binmap.field("d")
-#    string: bytes = binmap.field("10s")
-#    pascalstring: bytes = binmap.field("15p")
-#
-#
-# class TestAllDatatypes:
-#    def test_create_class(self):
-#        sc = AllDatatypes()
-#        assert sc
-#
-#    def test_with_arguments(self):
-#        sc = AllDatatypes(
-#            char=b"%",
-#            signedchar=-2,
-#            unsignedchar=5,
-#            boolean=True,
-#            short=-7,
-#            unsignedshort=17,
-#            integer=-15,
-#            unsignedint=11,
-#            long=-2312,
-#            unsignedlong=2212,
-#            longlong=-1212,
-#            unsignedlonglong=4444,
-#            halffloat=3.5,
-#            floating=3e3,
-#            double=13e23,
-#            string=b"helloworld",
-#            pascalstring=b"hello pascal",
-#        )
-#        assert sc.char == b"%"
-#        assert sc.signedchar == -2
-#        assert sc.unsignedchar == 5
-#        assert sc.boolean
-#        assert sc.short == -7
-#        assert sc.unsignedshort == 17
-#        assert sc.integer == -15
-#        assert sc.unsignedint == 11
-#        assert sc.long == -2312
-#        assert sc.unsignedlong == 2212
-#        assert sc.longlong == -1212
-#        assert sc.unsignedlonglong == 4444
-#        assert sc.halffloat == 3.5
-#        assert sc.floating == 3e3
-#        assert sc.double == 13e23
-#        assert sc.string == b"helloworld"
-#        assert sc.pascalstring == b"hello pascal"
-#        assert (
-#            bytes(sc)
-#            == b"\x00%\xfe\x05\x01\xff\xf9\x00\x11\xff\xff\xff\xf1\x00\x00\x00\x0b\xff\xff\xf6\xf8\x00\x00"
-#            b"\x08\xa4\xff\xff\xff\xff\xff\xff\xfbD\x00\x00\x00\x00\x00\x00\x11\\C\x00E;\x80\x00D\xf14\x92Bg\x0c"
-#            b"\xe8helloworld\x0chello pascal\x00\x00"
-#        )
-#
-#    def test_with_binarydata(self):
-#        sc = AllDatatypes(
-#            b"\x00W\xee\x15\x00\xf4\xf9\x10\x11\xff\xff\xff1\x00\x00\x01\x0b\xff\xff\xe6\xf8\x00\x00\x18"
-#            b"\xa4\xff\xff\xff\xff\xff\xff\xfbE\x00\x00\x00\x00\x00\x01\x11\\C\x01E;\x81\x00D\xf14\xa2Bg\x0c"
-#            b"\xe8hi world  \x09hi pascal\x00\x00\x00\x00\x00"
-#        )
-#        assert sc.char == b"W"
-#        assert sc.signedchar == -18
-#        assert sc.unsignedchar == 21
-#        assert not sc.boolean
-#        assert sc.short == -2823
-#        assert sc.unsignedshort == 4113
-#        assert sc.integer == -207
-#        assert sc.unsignedint == 267
-#        assert sc.long == -6408
-#        assert sc.unsignedlong == 6308
-#        assert sc.longlong == -1211
-#        assert sc.unsignedlonglong == 69980
-#        assert sc.halffloat == 3.501953125
-#        assert sc.floating == 3000.0625
-#        assert sc.double == 1.3000184467440736e24
-#        assert sc.string == b"hi world  "
-#        assert sc.pascalstring == b"hi pascal"
+@binmap.binmapdataclass
+class AllDatatypes(binmap.BinmapDataclass):
+    _pad: binmap.pad = binmap.padding(1)
+    char: binmap.char = b"\x00"
+    signedchar: binmap.signedchar = 0
+    unsignedchar: binmap.unsignedchar = 0
+    boolean: binmap.boolean = False
+    short: binmap.short = 0
+    unsignedshort: binmap.unsignedshort = 0
+    integer: binmap.integer = 0
+    unsignedint: binmap.unsignedinteger = 0
+    long: binmap.long = 0
+    unsignedlong: binmap.unsignedlong = 0
+    longlong: binmap.longlong = 0
+    unsignedlonglong: binmap.unsignedlonglong = 0
+    halffloat: binmap.halffloat = 0.0
+    floating: binmap.floating = 0.0
+    double: binmap.double = 0.0
+    string: binmap.string = binmap.stringfield(10)
+    pascalstring: binmap.pascalstring = binmap.pascalstringfield(15)
+
+
+class TestAllDatatypes:
+    def test_create_class(self):
+        sc = AllDatatypes()
+        assert sc
+
+    def test_with_arguments(self):
+        sc = AllDatatypes(
+            char=b"%",
+            signedchar=-2,
+            unsignedchar=5,
+            boolean=True,
+            short=-7,
+            unsignedshort=17,
+            integer=-15,
+            unsignedint=11,
+            long=-2312,
+            unsignedlong=2212,
+            longlong=-1212,
+            unsignedlonglong=4444,
+            halffloat=3.5,
+            floating=3e3,
+            double=13e23,
+            string=b"helloworld",
+            pascalstring=b"hello pascal",
+        )
+        assert sc.char == b"%"
+        assert sc.signedchar == -2
+        assert sc.unsignedchar == 5
+        assert sc.boolean
+        assert sc.short == -7
+        assert sc.unsignedshort == 17
+        assert sc.integer == -15
+        assert sc.unsignedint == 11
+        assert sc.long == -2312
+        assert sc.unsignedlong == 2212
+        assert sc.longlong == -1212
+        assert sc.unsignedlonglong == 4444
+        assert sc.halffloat == 3.5
+        assert sc.floating == 3e3
+        assert sc.double == 13e23
+        assert sc.string == b"helloworld"
+        assert sc.pascalstring == b"hello pascal"
+        assert (
+            bytes(sc)
+            == b"\x00%\xfe\x05\x01\xff\xf9\x00\x11\xff\xff\xff\xf1\x00\x00\x00\x0b\xff\xff\xf6\xf8\x00\x00"
+            b"\x08\xa4\xff\xff\xff\xff\xff\xff\xfbD\x00\x00\x00\x00\x00\x00\x11\\C\x00E;\x80\x00D\xf14\x92Bg\x0c"
+            b"\xe8helloworld\x0chello pascal\x00\x00"
+        )
+
+    def test_with_binarydata(self):
+        sc = AllDatatypes(
+            b"\x00W\xee\x15\x00\xf4\xf9\x10\x11\xff\xff\xff1\x00\x00\x01\x0b\xff\xff\xe6\xf8\x00\x00\x18"
+            b"\xa4\xff\xff\xff\xff\xff\xff\xfbE\x00\x00\x00\x00\x00\x01\x11\\C\x01E;\x81\x00D\xf14\xa2Bg\x0c"
+            b"\xe8hi world  \x09hi pascal\x00\x00\x00\x00\x00"
+        )
+        assert sc.char == b"W"
+        assert sc.signedchar == -18
+        assert sc.unsignedchar == 21
+        assert not sc.boolean
+        assert sc.short == -2823
+        assert sc.unsignedshort == 4113
+        assert sc.integer == -207
+        assert sc.unsignedint == 267
+        assert sc.long == -6408
+        assert sc.unsignedlong == 6308
+        assert sc.longlong == -1211
+        assert sc.unsignedlonglong == 69980
+        assert sc.halffloat == 3.501953125
+        assert sc.floating == 3000.0625
+        assert sc.double == 1.3000184467440736e24
+        assert sc.string == b"hi world  "
+        assert sc.pascalstring == b"hi pascal"
