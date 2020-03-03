@@ -1,4 +1,5 @@
 import struct
+from enum import IntEnum
 
 import pytest
 
@@ -245,56 +246,46 @@ class TestPadClass:
         assert bytes(p) == b"\n\x00\x00<\x00\x00\x00\x00"
 
 
+class WindEnum(IntEnum):
+    North = 0
+    East = 1
+    South = 2
+    West = 3
+
+
 @binmap.binmapdataclass
 class EnumClass(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
-    # wind: int = binmap.enum("h", {0: "North", 1: "East", 2: "South", 4: "West"})
+    wind: binmap.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
 
 
-@pytest.mark.skip(reason="Enums need to be redesigned")
 class TestEnumClass:
     def test_create_class(self):
         ec = EnumClass()
         assert ec
-        assert EnumClass.SOUTH == 2
 
     def test_get_enum(self):
         ec = EnumClass(temp=10, wind=2)
-        assert ec.wind == "South"
-        assert str(ec) == "EnumClass, temp=10, wind=South"
+        assert ec.wind == WindEnum.South
+        assert str(ec) == "EnumClass(temp=10, wind=2)"
 
     def test_enum_binary(self):
         ec = EnumClass(b"\x0a\x02")
-        assert ec.wind == "South"
-        assert str(ec) == "EnumClass, temp=10, wind=South"
+        assert ec.wind == WindEnum.South
+        assert str(ec) == "EnumClass(temp=10, wind=2)"
 
     def test_set_named_enum(self):
         ec = EnumClass()
-        ec.wind = "South"
+        ec.wind = WindEnum.South
         assert bytes(ec) == b"\x00\x02"
 
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(KeyError) as excinfo:
             ec.wind = "Norhtwest"
-        assert "Unknown enum or value" in str(excinfo)
+        assert "'Norhtwest'" in str(excinfo)
 
         with pytest.raises(ValueError) as excinfo:
             ec.wind = 1.2
-        assert "Unknown enum or value" in str(excinfo)
-
-    def test_colliding_enums(self):
-        with pytest.raises(ValueError) as excinfo:
-
-            class EnumCollide(binmap.BinmapDataclass):
-                _datafields = {
-                    "wind1": "B",
-                    "wind2": "B",
-                }
-                _enums = {
-                    "wind1": {0: "North"},
-                    "wind2": {2: "North"},
-                }
-
-        assert "North already defined" in str(excinfo)
+        assert "1.2 is not a valid WindEnum" in str(excinfo)
 
 
 @binmap.binmapdataclass

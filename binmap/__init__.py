@@ -1,6 +1,7 @@
 import dataclasses
 import struct
 from abc import ABC
+from enum import Enum
 from typing import Dict, NewType, Tuple, Type, TypeVar, Union, get_type_hints
 
 T = TypeVar("T")
@@ -28,7 +29,6 @@ class BinField(BaseDescriptor):
     def __set__(self, obj, value):
         type_hints = get_type_hints(obj)
         struct.pack(datatypemapping[type_hints[self.name]][1], value)
-        # struct.pack(obj._datafields[self.name], value)
         obj.__dict__[self.name] = value
 
 
@@ -44,25 +44,18 @@ class PaddingField(BaseDescriptor):
         pass
 
 
-class EnumField(BaseDescriptor):
+class EnumField(BinField):
     """EnumField descriptor uses "enum" to map to and from strings. Accepts
     both strings and values when setting. Only values that has a corresponding
     string is allowed."""
 
-    def __get__(self, obj, owner):
-        value = obj.__dict__[f"_{self.name}"]
-        return obj._enums[self.name][value]
-
     def __set__(self, obj, value):
-        if value in obj._enums[self.name]:
-            obj.__dict__[f"_{self.name}"] = value
+        datafieldsmap = {f.name: f for f in dataclasses.fields(obj)}
+        if type(value) is str:
+            datafieldsmap[self.name].metadata["enum"][value]
         else:
-            for k, v in obj._enums[self.name].items():
-                if v == value:
-                    obj.__dict__[f"_{self.name}"] = k
-                    return
-
-            raise ValueError("Unknown enum or value")
+            datafieldsmap[self.name].metadata["enum"](value)
+        obj.__dict__[self.name] = value
 
 
 class ConstField(BinField):
@@ -130,6 +123,8 @@ def binmapdataclass(cls: Type[T]) -> Type[T]:
         _base, _type = datatypemapping[type_hints[field_.name]]
         if "constant" in field_.metadata:
             _base = ConstField
+        elif "enum" in field_.metadata:
+            _base = EnumField
         setattr(cls, field_.name, _base(name=field_.name))
         if type_hints[field_.name] is pad:
             _type = field_.default * _type
@@ -153,13 +148,17 @@ def constant(value: Union[int, float, str]) -> dataclasses.Field:
 
 
 def stringfield(
-    length: int = 1, default: str = "", fillchar: str = " "
+    length: int = 1, default: bytes = b"", fillchar: bytes = b" "
 ) -> dataclasses.Field:
-    if default == "":
-        _default = "\x00" * length
+    if default == b"":
+        _default = b"\x00" * length
     else:
-        _default = f"{default:{fillchar}<{length}}"
+        _default = bytes(f"{default:{fillchar}<{length}}")
     return dataclasses.field(default=_default, metadata={"length": length})
+
+
+def enumfield(enumclass: Enum, default: Enum = None) -> dataclasses.Field:
+    return dataclasses.field(default=default, metadata={"enum": enumclass})
 
 
 @dataclasses.dataclass
