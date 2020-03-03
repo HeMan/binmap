@@ -1,7 +1,7 @@
 import dataclasses
 import struct
 from abc import ABC
-from typing import Dict, NewType, Tuple, Type, TypeVar, get_type_hints
+from typing import Dict, NewType, Tuple, Type, TypeVar, Union, get_type_hints
 
 T = TypeVar("T")
 
@@ -77,16 +77,16 @@ class ConstField(BinField):
 
 char = NewType("char", int)
 signedchar = NewType("signedchar", int)
-unsignedchar = NewType("unsingedchar", int)
+unsignedchar = NewType("unsignedchar", int)
 boolean = NewType("boolean", bool)
 short = NewType("short", int)
-unsignedshort = NewType("short", int)
+unsignedshort = NewType("unsignedshort", int)
 integer = NewType("integer", int)
 unsignedinteger = NewType("unsignedinteger", int)
 long = NewType("long", int)
-unsignedlong = NewType("unsignedlog", int)
+unsignedlong = NewType("unsignedlong", int)
 longlong = NewType("longlong", int)
-unsignedlonglong = NewType("longlong", int)
+unsignedlonglong = NewType("unsignedlonglong", int)
 halffloat = NewType("halffloat", float)
 floating = NewType("floating", float)
 double = NewType("double", float)
@@ -94,9 +94,8 @@ string = NewType("string", str)
 pascalstring = NewType("pascalstring", str)
 pad = NewType("pad", int)
 
-datatypemapping: Dict[type, Tuple[BaseDescriptor, str]] = {
+datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
     char: (BinField, "c"),
-    chr: (BinField, "c"),
     signedchar: (BinField, "b"),
     unsignedchar: (BinField, "B"),
     boolean: (BinField, "?"),
@@ -145,20 +144,22 @@ def binmapdataclass(cls: Type[T]) -> Type[T]:
     return cls
 
 
-def padding(length: int = 1):
+def padding(length: int = 1) -> dataclasses.Field:
     return dataclasses.field(default=length, repr=False, metadata={"padding": True})
 
 
-def constant(value):
+def constant(value: Union[int, float, str]) -> dataclasses.Field:
     return dataclasses.field(default=value, init=False, metadata={"constant": True})
 
 
-def stringfield(length: int = 1):
-    return dataclasses.field(default=b"\x00" * length, metadata={"length": length})
-
-
-def pascalstringfield(length=1):
-    return dataclasses.field(default=b"\x00" * length, metadata={"length": length})
+def stringfield(
+    length: int = 1, default: str = "", fillchar: str = " "
+) -> dataclasses.Field:
+    if default == "":
+        _default = "\x00" * length
+    else:
+        _default = f"{default:{fillchar}<{length}}"
+    return dataclasses.field(default=_default, metadata={"length": length})
 
 
 @dataclasses.dataclass
@@ -167,7 +168,7 @@ class BinmapDataclass(ABC):
     _formatstring = ""
     __binarydata: dataclasses.InitVar[bytes] = b""
 
-    def __init_subclass__(cls, byteorder=">"):
+    def __init_subclass__(cls, byteorder: str = ">"):
         cls._byteorder = byteorder
 
     def __bytes__(self):
@@ -181,7 +182,7 @@ class BinmapDataclass(ABC):
             ),
         )
 
-    def __post_init__(self, _binarydata):
+    def __post_init__(self, _binarydata: bytes):
         if _binarydata != b"":
             self._unpacker(_binarydata)
         # Kludgy hack to keep order
@@ -195,7 +196,7 @@ class BinmapDataclass(ABC):
                 del self.__dict__[f.name]
                 self.__dict__.update({f.name: val})
 
-    def _unpacker(self, value):
+    def _unpacker(self, value: bytes):
         type_hints = get_type_hints(self)
         datafieldsmap = {f.name: f for f in dataclasses.fields(self)}
         datafields = [
@@ -209,6 +210,6 @@ class BinmapDataclass(ABC):
 
             setattr(self, name, arg)
 
-    def frombytes(self, value):
+    def frombytes(self, value: bytes):
         self._unpacker(value)
         self._binarydata = value

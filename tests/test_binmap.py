@@ -350,7 +350,7 @@ class AllDatatypes(binmap.BinmapDataclass):
     floating: binmap.floating = 0.0
     double: binmap.double = 0.0
     string: binmap.string = binmap.stringfield(10)
-    pascalstring: binmap.pascalstring = binmap.pascalstringfield(15)
+    pascalstring: binmap.pascalstring = binmap.stringfield(15)
 
 
 class TestAllDatatypes:
