@@ -1,15 +1,13 @@
-Class for go to and from binary data
+Dataclass for go to and from binary data
 
 
-It's designed to be easy to create mappings by just having a
-``_datafields`` class attribute.
-
+It follows dataclass pattern with typehinting as the binary format.
 Temperature with one unsigned byte:
 
 .. code-block:: python
-
-    class Temperature(Binmap):
-        _datafields = {"temp": "B"}
+    @binmapdataclass
+    class Temperature(BinmapDataclass):
+        temp: unsignedchar = 0
 
     t = Temperature()
     t.temp = 22
@@ -24,9 +22,10 @@ Temperature and humidity consisting of one signed byte for temperature and
 one unsiged byte for humidity:
 
 .. code-block:: python
-
-    class TempHum(Binmap):
-        _datafields = {"temp": "b", "hum": "B"}
+    @binmapdataclass
+    class TempHum(BinmapDataclass):
+        temp: signedchar = 0
+        hum: unsignedchar = 0
 
     th = TempHum()
     th.temp = -10

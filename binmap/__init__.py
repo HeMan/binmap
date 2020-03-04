@@ -1,7 +1,7 @@
 import dataclasses
 import struct
 from abc import ABC
-from enum import Enum
+from enum import IntEnum
 from typing import Dict, NewType, Tuple, Type, TypeVar, Union, get_type_hints
 
 T = TypeVar("T")
@@ -114,6 +114,12 @@ datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
 
 
 def binmapdataclass(cls: Type[T]) -> Type[T]:
+    """
+    Decorator to create dataclass for binmapping
+
+    :param cls: Class to decorate
+    :return: Decorated class
+    """
     dataclasses.dataclass(cls)
     type_hints = get_type_hints(cls)
 
@@ -140,16 +146,36 @@ def binmapdataclass(cls: Type[T]) -> Type[T]:
 
 
 def padding(length: int = 1) -> dataclasses.Field:
+    """
+    Field generator function for padding elements
+
+    :param int lenght: Number of bytes of padded field
+    :return: dataclass field
+    """
     return dataclasses.field(default=length, repr=False, metadata={"padding": True})
 
 
 def constant(value: Union[int, float, str]) -> dataclasses.Field:
+    """
+    Field generator function for constant elements
+
+    :param value: Constant value for the field.
+    :return: dataclass field
+    """
     return dataclasses.field(default=value, init=False, metadata={"constant": True})
 
 
 def stringfield(
     length: int = 1, default: bytes = b"", fillchar: bytes = b" "
 ) -> dataclasses.Field:
+    """
+    Field generator function for string fields.
+
+    :param int lenght: lengt of the string.
+    :param bytes default: default value of the string
+    :param bytes fillchar: char to pad the string with
+    :return: dataclass field
+    """
     if default == b"":
         _default = b"\x00" * length
     else:
@@ -157,20 +183,40 @@ def stringfield(
     return dataclasses.field(default=_default, metadata={"length": length})
 
 
-def enumfield(enumclass: Enum, default: Enum = None) -> dataclasses.Field:
+def enumfield(enumclass: IntEnum, default: IntEnum = None) -> dataclasses.Field:
+    """
+    Field generator function for enum field
+
+    :param IntEnum enumclass: Class with enums.
+    :param IntEnum default: default value
+    :return: dataclass field
+    """
     return dataclasses.field(default=default, metadata={"enum": enumclass})
 
 
 @dataclasses.dataclass
 class BinmapDataclass(ABC):
+    """
+    Dataclass that does the converting to and from binary data
+    """
+
     _byteorder = ""
     _formatstring = ""
-    __binarydata: dataclasses.InitVar[bytes] = b""
+    _binarydata: dataclasses.InitVar[bytes] = b""
 
     def __init_subclass__(cls, byteorder: str = ">"):
+        """
+        Subclass initiator.
+        :param str byteorder: byteorder for binary data
+        """
         cls._byteorder = byteorder
 
     def __bytes__(self):
+        """
+        Packs the class' fields to a binary string
+        :return: Binary string packed.
+        :rtype: bytes
+        """
         return struct.pack(
             # TODO: use datclass.fields
             self._byteorder + self._formatstring,
@@ -182,6 +228,10 @@ class BinmapDataclass(ABC):
         )
 
     def __post_init__(self, _binarydata: bytes):
+        """
+        Initialises fields from a binary string
+        :param bytes _binarydata: Binary string that will be unpacked.
+        """
         if _binarydata != b"":
             self._unpacker(_binarydata)
         # Kludgy hack to keep order
@@ -196,6 +246,10 @@ class BinmapDataclass(ABC):
                 self.__dict__.update({f.name: val})
 
     def _unpacker(self, value: bytes):
+        """
+        Unpacks value to each field
+        :param bytes value: binary string to unpack
+        """
         type_hints = get_type_hints(self)
         datafieldsmap = {f.name: f for f in dataclasses.fields(self)}
         datafields = [
@@ -210,5 +264,9 @@ class BinmapDataclass(ABC):
             setattr(self, name, arg)
 
     def frombytes(self, value: bytes):
+        """
+        Public method to convert from byte string
+        :param bytes value: binary string to unpack
+        """
         self._unpacker(value)
         self._binarydata = value
