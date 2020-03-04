@@ -2,7 +2,28 @@ import dataclasses
 import struct
 from abc import ABC
 from enum import IntEnum
-from typing import Dict, NewType, Tuple, Type, TypeVar, Union, get_type_hints
+from typing import Dict, Tuple, Type, TypeVar, Union, get_type_hints
+
+from binmap.types import (
+    boolean,
+    char,
+    double,
+    floating,
+    halffloat,
+    integer,
+    long,
+    longlong,
+    pad,
+    pascalstring,
+    short,
+    signedchar,
+    string,
+    unsignedchar,
+    unsignedinteger,
+    unsignedlong,
+    unsignedlonglong,
+    unsignedshort,
+)
 
 T = TypeVar("T")
 
@@ -67,25 +88,6 @@ class ConstField(BinField):
         else:
             obj.__dict__.update({self.name: value})
 
-
-char = NewType("char", int)
-signedchar = NewType("signedchar", int)
-unsignedchar = NewType("unsignedchar", int)
-boolean = NewType("boolean", bool)
-short = NewType("short", int)
-unsignedshort = NewType("unsignedshort", int)
-integer = NewType("integer", int)
-unsignedinteger = NewType("unsignedinteger", int)
-long = NewType("long", int)
-unsignedlong = NewType("unsignedlong", int)
-longlong = NewType("longlong", int)
-unsignedlonglong = NewType("unsignedlonglong", int)
-halffloat = NewType("halffloat", float)
-floating = NewType("floating", float)
-double = NewType("double", float)
-string = NewType("string", str)
-pascalstring = NewType("pascalstring", str)
-pad = NewType("pad", int)
 
 datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
     char: (BinField, "c"),
