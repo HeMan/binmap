@@ -5,6 +5,7 @@ It follows dataclass pattern with typehinting as the binary format.
 Temperature with one unsigned byte:
 
 .. code-block:: python
+
     @binmapdataclass
     class Temperature(BinmapDataclass):
         temp: unsignedchar = 0
@@ -22,6 +23,7 @@ Temperature and humidity consisting of one signed byte for temperature and
 one unsiged byte for humidity:
 
 .. code-block:: python
+
     @binmapdataclass
     class TempHum(BinmapDataclass):
         temp: signedchar = 0
