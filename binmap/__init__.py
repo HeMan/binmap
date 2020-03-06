@@ -4,26 +4,7 @@ from abc import ABC
 from enum import IntEnum
 from typing import Dict, Tuple, Type, TypeVar, Union, get_type_hints
 
-from binmap.types import (
-    boolean,
-    char,
-    double,
-    floating,
-    halffloat,
-    integer,
-    long,
-    longlong,
-    pad,
-    pascalstring,
-    short,
-    signedchar,
-    string,
-    unsignedchar,
-    unsignedinteger,
-    unsignedlong,
-    unsignedlonglong,
-    unsignedshort,
-)
+from binmap import types
 
 T = TypeVar("T")
 
@@ -90,28 +71,28 @@ class ConstField(BinField):
 
 
 datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
-    char: (BinField, "c"),
-    signedchar: (BinField, "b"),
-    unsignedchar: (BinField, "B"),
-    boolean: (BinField, "?"),
+    types.char: (BinField, "c"),
+    types.signedchar: (BinField, "b"),
+    types.unsignedchar: (BinField, "B"),
+    types.boolean: (BinField, "?"),
     bool: (BinField, "?"),
-    short: (BinField, "h"),
-    unsignedshort: (BinField, "H"),
-    integer: (BinField, "i"),
+    types.short: (BinField, "h"),
+    types.unsignedshort: (BinField, "H"),
+    types.integer: (BinField, "i"),
     int: (BinField, "i"),
-    unsignedinteger: (BinField, "I"),
-    long: (BinField, "l"),
-    unsignedlong: (BinField, "L"),
-    longlong: (BinField, "q"),
-    unsignedlonglong: (BinField, "Q"),
-    halffloat: (BinField, "e"),
-    floating: (BinField, "f"),
+    types.unsignedinteger: (BinField, "I"),
+    types.long: (BinField, "l"),
+    types.unsignedlong: (BinField, "L"),
+    types.longlong: (BinField, "q"),
+    types.unsignedlonglong: (BinField, "Q"),
+    types.halffloat: (BinField, "e"),
+    types.floating: (BinField, "f"),
     float: (BinField, "f"),
-    double: (BinField, "d"),
-    string: (BinField, "s"),
+    types.double: (BinField, "d"),
+    types.string: (BinField, "s"),
     str: (BinField, "s"),
-    pascalstring: (BinField, "p"),
-    pad: (PaddingField, "x"),
+    types.pascalstring: (BinField, "p"),
+    types.pad: (PaddingField, "x"),
 }
 
 
@@ -192,11 +173,11 @@ class BinmapDataclass(ABC):
             elif "enum" in field_.metadata:
                 _base = EnumField
             setattr(cls, field_.name, _base(name=field_.name))
-            if type_hints[field_.name] is pad:
+            if type_hints[field_.name] is types.pad:
                 _type = field_.default * _type
             if (
-                type_hints[field_.name] is string
-                or type_hints[field_.name] is pascalstring
+                type_hints[field_.name] is types.string
+                or type_hints[field_.name] is types.pascalstring
                 or type_hints[field_.name] is str
             ):
                 _type = str(field_.metadata["length"]) + _type
@@ -246,7 +227,9 @@ class BinmapDataclass(ABC):
         type_hints = get_type_hints(self)
         datafieldsmap = {f.name: f for f in dataclasses.fields(self)}
         datafields = [
-            f.name for f in dataclasses.fields(self) if not (type_hints[f.name] is pad)
+            f.name
+            for f in dataclasses.fields(self)
+            if not (type_hints[f.name] is types.pad)
         ]
         args = struct.unpack(self._byteorder + self._formatstring, value)
         for arg, name in zip(args, datafields):

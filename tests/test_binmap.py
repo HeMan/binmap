@@ -4,6 +4,7 @@ from enum import IntEnum
 import pytest
 
 import binmap
+from binmap import types
 
 
 def test_baseclass():
@@ -19,12 +20,12 @@ def test_baseclass_with_keyword():
 
 
 class Temp(binmap.BinmapDataclass):
-    temp: binmap.unsignedchar = 0
+    temp: types.unsignedchar = 0
 
 
 class TempHum(binmap.BinmapDataclass):
-    temp: binmap.unsignedchar = 0
-    humidity: binmap.unsignedchar = 0
+    temp: types.unsignedchar = 0
+    humidity: types.unsignedchar = 0
 
 
 def test_different_classes_eq():
@@ -35,11 +36,11 @@ def test_different_classes_eq():
 
 
 class Bigendian(binmap.BinmapDataclass):
-    value: binmap.longlong = 0
+    value: types.longlong = 0
 
 
 class Littleedian(binmap.BinmapDataclass, byteorder="<"):
-    value: binmap.longlong = 0
+    value: types.longlong = 0
 
 
 def test_dataformats():
@@ -170,17 +171,17 @@ class TestTempHumClass:
 
 
 class Pad(binmap.BinmapDataclass):
-    temp: binmap.unsignedchar = 0
-    pad: binmap.pad = binmap.padding(2)
-    humidity: binmap.unsignedchar = 0
+    temp: types.unsignedchar = 0
+    pad: types.pad = binmap.padding(2)
+    humidity: types.unsignedchar = 0
 
 
 class AdvancedPad(binmap.BinmapDataclass):
-    temp: binmap.unsignedchar = 0
-    _pad1: binmap.pad = binmap.padding(2)
-    humidity: binmap.unsignedchar = 0
-    _pad2: binmap.pad = binmap.padding(3)
-    _pad3: binmap.pad = binmap.padding(1)
+    temp: types.unsignedchar = 0
+    _pad1: types.pad = binmap.padding(2)
+    humidity: types.unsignedchar = 0
+    _pad2: types.pad = binmap.padding(3)
+    _pad3: types.pad = binmap.padding(1)
 
 
 class TestPadClass:
@@ -248,8 +249,8 @@ class WindEnum(IntEnum):
 
 
 class EnumClass(binmap.BinmapDataclass):
-    temp: binmap.unsignedchar = 0
-    wind: binmap.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
+    temp: types.unsignedchar = 0
+    wind: types.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
 
 
 class TestEnumClass:
@@ -282,8 +283,8 @@ class TestEnumClass:
 
 
 class ConstValues(binmap.BinmapDataclass):
-    datatype: binmap.unsignedchar = binmap.constant(0x15)
-    status: binmap.unsignedchar = 0
+    datatype: types.unsignedchar = binmap.constant(0x15)
+    status: types.unsignedchar = 0
 
 
 class TestConstValues:
@@ -315,24 +316,24 @@ class TestConstValues:
 
 
 class AllDatatypes(binmap.BinmapDataclass):
-    _pad: binmap.pad = binmap.padding(1)
-    char: binmap.char = b"\x00"
-    signedchar: binmap.signedchar = 0
-    unsignedchar: binmap.unsignedchar = 0
-    boolean: binmap.boolean = False
-    short: binmap.short = 0
-    unsignedshort: binmap.unsignedshort = 0
-    integer: binmap.integer = 0
-    unsignedint: binmap.unsignedinteger = 0
-    long: binmap.long = 0
-    unsignedlong: binmap.unsignedlong = 0
-    longlong: binmap.longlong = 0
-    unsignedlonglong: binmap.unsignedlonglong = 0
-    halffloat: binmap.halffloat = 0.0
-    floating: binmap.floating = 0.0
-    double: binmap.double = 0.0
-    string: binmap.string = binmap.stringfield(10)
-    pascalstring: binmap.pascalstring = binmap.stringfield(15)
+    _pad: types.pad = binmap.padding(1)
+    char: types.char = b"\x00"
+    signedchar: types.signedchar = 0
+    unsignedchar: types.unsignedchar = 0
+    boolean: types.boolean = False
+    short: types.short = 0
+    unsignedshort: types.unsignedshort = 0
+    integer: types.integer = 0
+    unsignedint: types.unsignedinteger = 0
+    long: types.long = 0
+    unsignedlong: types.unsignedlong = 0
+    longlong: types.longlong = 0
+    unsignedlonglong: types.unsignedlonglong = 0
+    halffloat: types.halffloat = 0.0
+    floating: types.floating = 0.0
+    double: types.double = 0.0
+    string: types.string = binmap.stringfield(10)
+    pascalstring: types.pascalstring = binmap.stringfield(15)
 
 
 class TestAllDatatypes:
