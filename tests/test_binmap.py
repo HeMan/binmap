@@ -18,12 +18,10 @@ def test_baseclass_with_keyword():
     assert "got an unexpected keyword argument 'temp'" in str(excinfo)
 
 
-@binmap.binmapdataclass
 class Temp(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
 
 
-@binmap.binmapdataclass
 class TempHum(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     humidity: binmap.unsignedchar = 0
@@ -36,12 +34,10 @@ def test_different_classes_eq():
     assert t.temp == th.temp
 
 
-@binmap.binmapdataclass
 class Bigendian(binmap.BinmapDataclass):
     value: binmap.longlong = 0
 
 
-@binmap.binmapdataclass
 class Littleedian(binmap.BinmapDataclass, byteorder="<"):
     value: binmap.longlong = 0
 
@@ -173,14 +169,12 @@ class TestTempHumClass:
         assert th2 != th4
 
 
-@binmap.binmapdataclass
 class Pad(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     pad: binmap.pad = binmap.padding(2)
     humidity: binmap.unsignedchar = 0
 
 
-@binmap.binmapdataclass
 class AdvancedPad(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     _pad1: binmap.pad = binmap.padding(2)
@@ -253,7 +247,6 @@ class WindEnum(IntEnum):
     West = 3
 
 
-@binmap.binmapdataclass
 class EnumClass(binmap.BinmapDataclass):
     temp: binmap.unsignedchar = 0
     wind: binmap.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
@@ -288,7 +281,6 @@ class TestEnumClass:
         assert "1.2 is not a valid WindEnum" in str(excinfo)
 
 
-@binmap.binmapdataclass
 class ConstValues(binmap.BinmapDataclass):
     datatype: binmap.unsignedchar = binmap.constant(0x15)
     status: binmap.unsignedchar = 0
@@ -322,7 +314,6 @@ class TestConstValues:
         assert c.status == 1
 
 
-@binmap.binmapdataclass
 class AllDatatypes(binmap.BinmapDataclass):
     _pad: binmap.pad = binmap.padding(1)
     char: binmap.char = b"\x00"

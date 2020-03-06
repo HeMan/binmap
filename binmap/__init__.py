@@ -115,38 +115,6 @@ datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
 }
 
 
-def binmapdataclass(cls: Type[T]) -> Type[T]:
-    """
-    Decorator to create dataclass for binmapping
-
-    :param cls: Class to decorate
-    :return: Decorated class
-    """
-    dataclasses.dataclass(cls)
-    type_hints = get_type_hints(cls)
-
-    cls._formatstring = ""
-
-    for field_ in dataclasses.fields(cls):
-        _base, _type = datatypemapping[type_hints[field_.name]]
-        if "constant" in field_.metadata:
-            _base = ConstField
-        elif "enum" in field_.metadata:
-            _base = EnumField
-        setattr(cls, field_.name, _base(name=field_.name))
-        if type_hints[field_.name] is pad:
-            _type = field_.default * _type
-        if (
-            type_hints[field_.name] is string
-            or type_hints[field_.name] is pascalstring
-            or type_hints[field_.name] is str
-        ):
-            _type = str(field_.metadata["length"]) + _type
-        cls._formatstring += _type
-
-    return cls
-
-
 def padding(length: int = 1) -> dataclasses.Field:
     """
     Field generator function for padding elements
@@ -208,10 +176,33 @@ class BinmapDataclass(ABC):
 
     def __init_subclass__(cls, byteorder: str = ">"):
         """
-        Subclass initiator.
+        Subclass initiator. This makes the inheriting class a dataclass.
         :param str byteorder: byteorder for binary data
         """
         cls._byteorder = byteorder
+        dataclasses.dataclass(cls)
+        type_hints = get_type_hints(cls)
+
+        cls._formatstring = ""
+
+        for field_ in dataclasses.fields(cls):
+            _base, _type = datatypemapping[type_hints[field_.name]]
+            if "constant" in field_.metadata:
+                _base = ConstField
+            elif "enum" in field_.metadata:
+                _base = EnumField
+            setattr(cls, field_.name, _base(name=field_.name))
+            if type_hints[field_.name] is pad:
+                _type = field_.default * _type
+            if (
+                type_hints[field_.name] is string
+                or type_hints[field_.name] is pascalstring
+                or type_hints[field_.name] is str
+            ):
+                _type = str(field_.metadata["length"]) + _type
+            cls._formatstring += _type
+
+        return cls
 
     def __bytes__(self):
         """
