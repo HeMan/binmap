@@ -151,7 +151,6 @@ class BinmapDataclass(ABC):
     Dataclass that does the converting to and from binary data
     """
 
-    _byteorder = ""
     _formatstring = ""
     _binarydata: dataclasses.InitVar[bytes] = b""
 
@@ -160,11 +159,10 @@ class BinmapDataclass(ABC):
         Subclass initiator. This makes the inheriting class a dataclass.
         :param str byteorder: byteorder for binary data
         """
-        cls._byteorder = byteorder
         dataclasses.dataclass(cls)
         type_hints = get_type_hints(cls)
 
-        cls._formatstring = ""
+        cls._formatstring = byteorder
 
         for field_ in dataclasses.fields(cls):
             _base, _type = datatypemapping[type_hints[field_.name]]
@@ -183,8 +181,6 @@ class BinmapDataclass(ABC):
                 _type = str(field_.metadata["length"]) + _type
             cls._formatstring += _type
 
-        return cls
-
     def __bytes__(self):
         """
         Packs the class' fields to a binary string
@@ -193,12 +189,8 @@ class BinmapDataclass(ABC):
         """
         return struct.pack(
             # TODO: use datclass.fields
-            self._byteorder + self._formatstring,
-            *(
-                v
-                for k, v in self.__dict__.items()
-                if k not in ["_byteorder", "_formatstring", "_binarydata"]
-            ),
+            self._formatstring,
+            *(v for k, v in self.__dict__.items() if k not in ["_formatstring"]),
         )
 
     def __post_init__(self, _binarydata: bytes):
@@ -207,7 +199,7 @@ class BinmapDataclass(ABC):
         :param bytes _binarydata: Binary string that will be unpacked.
         """
         if _binarydata != b"":
-            self._unpacker(_binarydata)
+            self.frombytes(_binarydata)
         # Kludgy hack to keep order
         for f in dataclasses.fields(self):
             if "padding" in f.metadata:
@@ -219,7 +211,7 @@ class BinmapDataclass(ABC):
                 del self.__dict__[f.name]
                 self.__dict__.update({f.name: val})
 
-    def _unpacker(self, value: bytes):
+    def frombytes(self, value: bytes):
         """
         Unpacks value to each field
         :param bytes value: binary string to unpack
@@ -231,18 +223,10 @@ class BinmapDataclass(ABC):
             for f in dataclasses.fields(self)
             if not (type_hints[f.name] is types.pad)
         ]
-        args = struct.unpack(self._byteorder + self._formatstring, value)
+        args = struct.unpack(self._formatstring, value)
         for arg, name in zip(args, datafields):
             if "constant" in datafieldsmap[name].metadata:
                 if arg != datafieldsmap[name].default:
                     raise ValueError("Constant doesn't match binary data")
 
             setattr(self, name, arg)
-
-    def frombytes(self, value: bytes):
-        """
-        Public method to convert from byte string
-        :param bytes value: binary string to unpack
-        """
-        self._unpacker(value)
-        self._binarydata = value
