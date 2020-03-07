@@ -1,6 +1,5 @@
 import dataclasses
 import struct
-from abc import ABC
 from enum import IntEnum
 from typing import Dict, Tuple, Type, TypeVar, Union, get_type_hints
 
@@ -146,7 +145,7 @@ def enumfield(enumclass: IntEnum, default: IntEnum = None) -> dataclasses.Field:
 
 
 @dataclasses.dataclass
-class BinmapDataclass(ABC):
+class BinmapDataclass:
     """
     Dataclass that does the converting to and from binary data
     """
