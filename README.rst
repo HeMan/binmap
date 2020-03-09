@@ -6,7 +6,6 @@ Temperature with one unsigned byte:
 
 .. code-block:: python
 
-    @binmapdataclass
     class Temperature(BinmapDataclass):
         temp: unsignedchar = 0
 
@@ -24,7 +23,6 @@ one unsiged byte for humidity:
 
 .. code-block:: python
 
-    @binmapdataclass
     class TempHum(BinmapDataclass):
         temp: signedchar = 0
         hum: unsignedchar = 0
