@@ -66,7 +66,7 @@ class ConstField(BinField):
         if self.name in obj.__dict__:
             raise AttributeError(f"{self.name} is a constant")
         else:
-            obj.__dict__.update({self.name: value})
+            obj.__dict__[self.name] = value
 
 
 datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
@@ -161,6 +161,8 @@ class BinmapDataclass:
         dataclasses.dataclass(cls)
         type_hints = get_type_hints(cls)
 
+        cls._datafields = []
+        cls._datafieldsmap = {}
         cls._formatstring = byteorder
 
         for field_ in dataclasses.fields(cls):
@@ -172,11 +174,7 @@ class BinmapDataclass:
             setattr(cls, field_.name, _base(name=field_.name))
             if type_hints[field_.name] is types.pad:
                 _type = field_.default * _type
-            if (
-                type_hints[field_.name] is types.string
-                or type_hints[field_.name] is types.pascalstring
-                or type_hints[field_.name] is str
-            ):
+            if type_hints[field_.name] in (types.string, types.pascalstring, str):
                 _type = str(field_.metadata["length"]) + _type
             cls._formatstring += _type
 
@@ -201,6 +199,7 @@ class BinmapDataclass:
             self.frombytes(_binarydata)
         # Kludgy hack to keep order
         for f in dataclasses.fields(self):
+            self._datafieldsmap.update({f.name: f})
             if "padding" in f.metadata:
                 continue
             if "constant" in f.metadata:
@@ -209,23 +208,17 @@ class BinmapDataclass:
                 val = getattr(self, f.name)
                 del self.__dict__[f.name]
                 self.__dict__.update({f.name: val})
+            self._datafields.append(f.name)
 
     def frombytes(self, value: bytes):
         """
         Unpacks value to each field
         :param bytes value: binary string to unpack
         """
-        type_hints = get_type_hints(self)
-        datafieldsmap = {f.name: f for f in dataclasses.fields(self)}
-        datafields = [
-            f.name
-            for f in dataclasses.fields(self)
-            if not (type_hints[f.name] is types.pad)
-        ]
         args = struct.unpack(self._formatstring, value)
-        for arg, name in zip(args, datafields):
-            if "constant" in datafieldsmap[name].metadata:
-                if arg != datafieldsmap[name].default:
+        for arg, name in zip(args, self._datafields):
+            if "constant" in self._datafieldsmap[name].metadata:
+                if arg != self._datafieldsmap[name].default:
                     raise ValueError("Constant doesn't match binary data")
 
             setattr(self, name, arg)
