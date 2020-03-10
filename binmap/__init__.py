@@ -1,5 +1,11 @@
+import dataclasses
 import struct
-from inspect import Parameter, Signature
+from enum import IntEnum
+from typing import Dict, Tuple, Type, TypeVar, Union, get_type_hints
+
+from binmap import types
+
+T = TypeVar("T")
 
 
 class BaseDescriptor:
@@ -7,7 +13,10 @@ class BaseDescriptor:
 
     :param name: Variable name"""
 
-    def __init__(self, name):
+    def __set_name__(self, obj, name):
+        self.name = name
+
+    def __init__(self, name=""):
         self.name = name
 
 
@@ -19,7 +28,8 @@ class BinField(BaseDescriptor):
         return obj.__dict__[self.name]
 
     def __set__(self, obj, value):
-        struct.pack(obj._datafields[self.name], value)
+        type_hints = get_type_hints(obj)
+        struct.pack(datatypemapping[type_hints[self.name]][1], value)
         obj.__dict__[self.name] = value
 
 
@@ -35,191 +45,180 @@ class PaddingField(BaseDescriptor):
         pass
 
 
-class EnumField(BaseDescriptor):
+class EnumField(BinField):
     """EnumField descriptor uses "enum" to map to and from strings. Accepts
     both strings and values when setting. Only values that has a corresponding
     string is allowed."""
 
-    def __get__(self, obj, owner):
-        value = obj.__dict__[f"_{self.name}"]
-        return obj._enums[self.name][value]
-
     def __set__(self, obj, value):
-        if value in obj._enums[self.name]:
-            obj.__dict__[f"_{self.name}"] = value
+        datafieldsmap = {f.name: f for f in dataclasses.fields(obj)}
+        if type(value) is str:
+            datafieldsmap[self.name].metadata["enum"][value]
         else:
-            for k, v in obj._enums[self.name].items():
-                if v == value:
-                    obj.__dict__[f"_{self.name}"] = k
-                    return
-
-            raise ValueError("Unknown enum or value")
+            datafieldsmap[self.name].metadata["enum"](value)
+        obj.__dict__[self.name] = value
 
 
 class ConstField(BinField):
     """ConstField descriptor keeps it's value"""
 
     def __set__(self, obj, value):
-        raise AttributeError(f"{self.name} is a constant")
+        if self.name in obj.__dict__:
+            raise AttributeError(f"{self.name} is a constant")
+        else:
+            obj.__dict__[self.name] = value
 
 
-class BinmapMetaclass(type):
-    """Metaclass for :class:`Binmap` and all subclasses of :class:`Binmap`.
-
-    :class:`BinmapMetaclass` responsibility is to add for adding variables from
-    _datafields, _enums, _constants and add keyword only parameters.
-
-    _datafields starting with ``_pad`` does't get any instance variable mapped.
-
-    _enums get a variable called _{name} which has the binary data."""
-
-    def __new__(cls, clsname, bases, clsdict):
-        clsobject = super().__new__(cls, clsname, bases, clsdict)
-        keys = clsobject._datafields.keys()
-        sig = Signature(
-            [
-                Parameter(
-                    "binarydata",
-                    Parameter.POSITIONAL_OR_KEYWORD,
-                    default=Parameter.default,
-                )
-            ]
-            + [
-                Parameter(name, Parameter.KEYWORD_ONLY, default=Parameter.default)
-                for name in keys
-            ]
-        )
-        setattr(clsobject, "__signature__", sig)
-        for enum in clsobject._enums:
-            for value, const in clsobject._enums[enum].items():
-                if hasattr(clsobject, const.upper()):
-                    raise ValueError(f"{const} already defined")
-                setattr(clsobject, const.upper(), value)
-        for name in keys:
-            if name.startswith("_pad"):
-                setattr(clsobject, name, PaddingField(name=name))
-            elif name in clsobject._constants:
-                setattr(clsobject, name, ConstField(name=name))
-            elif name in clsobject._enums:
-                setattr(clsobject, name, EnumField(name=name))
-                setattr(clsobject, f"_{name}", BinField(name=f"_{name}"))
-            else:
-                setattr(clsobject, name, BinField(name=name))
-        return clsobject
+datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
+    types.char: (BinField, "c"),
+    types.signedchar: (BinField, "b"),
+    types.unsignedchar: (BinField, "B"),
+    types.boolean: (BinField, "?"),
+    bool: (BinField, "?"),
+    types.short: (BinField, "h"),
+    types.unsignedshort: (BinField, "H"),
+    types.integer: (BinField, "i"),
+    int: (BinField, "i"),
+    types.unsignedinteger: (BinField, "I"),
+    types.long: (BinField, "l"),
+    types.unsignedlong: (BinField, "L"),
+    types.longlong: (BinField, "q"),
+    types.unsignedlonglong: (BinField, "Q"),
+    types.halffloat: (BinField, "e"),
+    types.floating: (BinField, "f"),
+    float: (BinField, "f"),
+    types.double: (BinField, "d"),
+    types.string: (BinField, "s"),
+    str: (BinField, "s"),
+    types.pascalstring: (BinField, "p"),
+    types.pad: (PaddingField, "x"),
+}
 
 
-class Binmap(metaclass=BinmapMetaclass):
-    """A class that maps to and from binary data using :py:class:`struct`.
-    All fields in :attr:`binmap.Binmap._datafields` gets a corresponding
-    variable in instance, except variables starting with ``_pad``, which is
-    just padding.
+def padding(length: int = 1) -> dataclasses.Field:
+    """
+    Field generator function for padding elements
 
-    To create an enum mapping you could add :attr:`binmap.Binmap._enums` with a
-    map to your corresponing datafield:
-
-    .. code-block:: python
-
-        class TempWind(Binmap):
-            _datafields = {"temp": "b", "wind": "B"}
-            _enums = {"wind": {0: "North", 1: "East", 2: "South", 4: "West"}}
-
-        tw = TempWind()
-        tw.temp = 3
-        tw.wind = "South"
-        print(bytes(tw))
-        b'\\x03\\x02'
+    :param int lenght: Number of bytes of padded field
+    :return: dataclass field
+    """
+    return dataclasses.field(default=length, repr=False, metadata={"padding": True})
 
 
+def constant(value: Union[int, float, str]) -> dataclasses.Field:
+    """
+    Field generator function for constant elements
+
+    :param value: Constant value for the field.
+    :return: dataclass field
+    """
+    return dataclasses.field(default=value, init=False, metadata={"constant": True})
+
+
+def stringfield(
+    length: int = 1, default: bytes = b"", fillchar: bytes = b" "
+) -> dataclasses.Field:
+    """
+    Field generator function for string fields.
+
+    :param int lenght: lengt of the string.
+    :param bytes default: default value of the string
+    :param bytes fillchar: char to pad the string with
+    :return: dataclass field
+    """
+    if default == b"":
+        _default = b"\x00" * length
+    else:
+        _default = bytes(f"{default:{fillchar}<{length}}")
+    return dataclasses.field(default=_default, metadata={"length": length})
+
+
+def enumfield(enumclass: IntEnum, default: IntEnum = None) -> dataclasses.Field:
+    """
+    Field generator function for enum field
+
+    :param IntEnum enumclass: Class with enums.
+    :param IntEnum default: default value
+    :return: dataclass field
+    """
+    return dataclasses.field(default=default, metadata={"enum": enumclass})
+
+
+@dataclasses.dataclass
+class BinmapDataclass:
+    """
+    Dataclass that does the converting to and from binary data
     """
 
-    #: _byteorder: charcter with byteorder
-    _byteorder = ">"
-    #: _datafields: dict with variable name as key and :py:class:`struct` `format strings`_ as value
-    _datafields = {}
-    #: _enums: dict of dicts containing maps of strings
-    _enums = {}
-    #: _constants: dict of constants. This creates a variable that is allways
-    #: the same value. It won't accept binary data with any other value
-    _constants = {}
+    _formatstring = ""
+    _binarydata: dataclasses.InitVar[bytes] = b""
 
-    def __init__(self, *args, **kwargs):
-        self._formatstring = self._byteorder
-        for fmt in self._datafields.values():
-            self._formatstring += fmt
+    def __init_subclass__(cls, byteorder: str = ">"):
+        """
+        Subclass initiator. This makes the inheriting class a dataclass.
+        :param str byteorder: byteorder for binary data
+        """
+        dataclasses.dataclass(cls)
+        type_hints = get_type_hints(cls)
 
-        bound = self.__signature__.bind(*args, **kwargs)
+        cls._datafields = []
+        cls._datafieldsmap = {}
+        cls._formatstring = byteorder
 
-        if "binarydata" in bound.arguments:
-            self._binarydata = bound.arguments["binarydata"]
-            self._unpacker(self._binarydata)
-
-        for param in self.__signature__.parameters.values():
-            if param.name == "binarydata":
-                continue
-            if param.name in bound.arguments:
-                if param.name in self._constants:
-                    raise AttributeError(f"{param.name} is a constant")
-                setattr(self, param.name, bound.arguments[param.name])
-            elif param.name in self._constants:
-                self.__dict__[param.name] = self._constants[param.name]
-            elif param.name not in self.__dict__:
-                if self._datafields[param.name] in "BbHhIiLlQq":
-                    setattr(self, param.name, 0)
-                elif self._datafields[param.name] in "efd":
-                    setattr(self, param.name, 0.0)
-                elif self._datafields[param.name] == "c":
-                    setattr(self, param.name, b"\x00")
-                else:
-                    setattr(self, param.name, b"")
-
-        if len(args) == 1:
-            self._binarydata = args[0]
-            self._unpacker(self._binarydata)
-        else:
-            self._binarydata = b""
-
-    def _unpacker(self, value):
-        args = struct.unpack(self._formatstring, value)
-        datafields = [
-            field for field in self._datafields if not field.startswith("_pad")
-        ]
-        for arg, name in zip(args, datafields):
-            if name in self._constants:
-                if arg != self._constants[name]:
-                    raise ValueError("Constant doesn't match binary data")
-            else:
-                setattr(self, name, arg)
+        for field_ in dataclasses.fields(cls):
+            _base, _type = datatypemapping[type_hints[field_.name]]
+            if "constant" in field_.metadata:
+                _base = ConstField
+            elif "enum" in field_.metadata:
+                _base = EnumField
+            setattr(cls, field_.name, _base(name=field_.name))
+            if type_hints[field_.name] is types.pad:
+                _type = field_.default * _type
+            if type_hints[field_.name] in (types.string, types.pascalstring, str):
+                _type = str(field_.metadata["length"]) + _type
+            cls._formatstring += _type
 
     def __bytes__(self):
-        """packs or unpacks all variables to a binary structure defined by
-        _datafields' format values"""
-        datas = []
-        for var in self._datafields:
-            if not var.startswith("_pad"):
-                if var in self._enums:
-                    datas.append(getattr(self, f"_{var}"))
-                else:
-                    datas.append(getattr(self, var))
-        return struct.pack(self._formatstring, *datas)
+        """
+        Packs the class' fields to a binary string
+        :return: Binary string packed.
+        :rtype: bytes
+        """
+        return struct.pack(
+            # TODO: use datclass.fields
+            self._formatstring,
+            *(v for k, v in self.__dict__.items() if k not in ["_formatstring"]),
+        )
 
-    def frombytes(self, value):
-        self._unpacker(value)
-        self._binarydata = value
+    def __post_init__(self, _binarydata: bytes):
+        """
+        Initialises fields from a binary string
+        :param bytes _binarydata: Binary string that will be unpacked.
+        """
+        if _binarydata != b"":
+            self.frombytes(_binarydata)
+        # Kludgy hack to keep order
+        for f in dataclasses.fields(self):
+            self._datafieldsmap.update({f.name: f})
+            if "padding" in f.metadata:
+                continue
+            if "constant" in f.metadata:
+                self.__dict__.update({f.name: f.default})
+            else:
+                val = getattr(self, f.name)
+                del self.__dict__[f.name]
+                self.__dict__.update({f.name: val})
+            self._datafields.append(f.name)
 
-    def __eq__(self, other):
-        if self.__signature__ != other.__signature__:
-            return False
-        for field in self._datafields:
-            v1 = getattr(self, field)
-            v2 = getattr(other, field)
-            if v1 != v2:
-                return False
-        return True
+    def frombytes(self, value: bytes):
+        """
+        Unpacks value to each field
+        :param bytes value: binary string to unpack
+        """
+        args = struct.unpack(self._formatstring, value)
+        for arg, name in zip(args, self._datafields):
+            if "constant" in self._datafieldsmap[name].metadata:
+                if arg != self._datafieldsmap[name].default:
+                    raise ValueError("Constant doesn't match binary data")
 
-    def __str__(self):
-        retval = f"{self.__class__.__name__}"
-        if self._datafields:
-            for key in self._datafields:
-                if not key.startswith("_pad"):
-                    retval += ", %s=%s" % (key, getattr(self, key))
-        return retval
+            setattr(self, name, arg)

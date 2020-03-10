@@ -1,56 +1,31 @@
 import struct
+from enum import IntEnum
 
 import pytest
 
 import binmap
+from binmap import types
 
 
 def test_baseclass():
-    b = binmap.Binmap()
-    assert type(b) == binmap.Binmap
-    assert str(b) == "Binmap"
+    b = binmap.BinmapDataclass()
+    assert type(b) == binmap.BinmapDataclass
+    assert str(b) == "BinmapDataclass()"
 
 
 def test_baseclass_with_keyword():
     with pytest.raises(TypeError) as excinfo:
-        binmap.Binmap(temp=10)
+        binmap.BinmapDataclass(temp=10)
     assert "got an unexpected keyword argument 'temp'" in str(excinfo)
 
 
-def test_illegal_fieldnames():
-    with pytest.raises(ValueError) as excinfo:
-
-        class Space(binmap.Binmap):
-            _datafields = {
-                " ": "B",
-            }
-
-    assert "' ' is not a valid parameter name" in str(excinfo)
-
-    with pytest.raises(ValueError) as excinfo:
-
-        class BadName(binmap.Binmap):
-            _datafields = {
-                "-a": "B",
-            }
-
-    assert "'-a' is not a valid parameter name" in str(excinfo)
-    with pytest.raises(ValueError) as excinfo:
-
-        class Number(binmap.Binmap):
-            _datafields = {
-                "1": "B",
-            }
-
-    assert "'1' is not a valid parameter name" in str(excinfo)
+class Temp(binmap.BinmapDataclass):
+    temp: types.unsignedchar = 0
 
 
-class Temp(binmap.Binmap):
-    _datafields = {"temp": "B"}
-
-
-class TempHum(binmap.Binmap):
-    _datafields = {"temp": "B", "humidity": "B"}
+class TempHum(binmap.BinmapDataclass):
+    temp: types.unsignedchar = 0
+    humidity: types.unsignedchar = 0
 
 
 def test_different_classes_eq():
@@ -60,17 +35,15 @@ def test_different_classes_eq():
     assert t.temp == th.temp
 
 
-class Bigendian(binmap.Binmap):
-    _datafields = {"value": "q"}
+class Bigendian(binmap.BinmapDataclass):
+    value: types.longlong = 0
 
 
-class Littleedian(binmap.Binmap):
-    _byteorder = "<"
-    _datafields = {"value": "q"}
+class Littleedian(binmap.BinmapDataclass, byteorder="<"):
+    value: types.longlong = 0
 
 
 def test_dataformats():
-
     be = Bigendian(value=-10)
     le = Littleedian(value=-10)
 
@@ -94,7 +67,8 @@ class TestTempClass:
     def test_with_argument(self):
         t = Temp(temp=10)
         assert t.temp == 10
-        assert str(t) == "Temp, temp=10"
+        assert bytes(t) == b"\x0a"
+        assert str(t) == "Temp(temp=10)"
 
     def test_without_argument(self):
         t = Temp()
@@ -156,7 +130,7 @@ class TestTempHumClass:
         th = TempHum(temp=10, humidity=60)
         assert th.temp == 10
         assert th.humidity == 60
-        assert str(th) == "TempHum, temp=10, humidity=60"
+        assert str(th) == "TempHum(temp=10, humidity=60)"
 
     def test_without_argument(self):
         th = TempHum()
@@ -196,36 +170,36 @@ class TestTempHumClass:
         assert th2 != th4
 
 
-class Pad(binmap.Binmap):
-    _datafields = {"temp": "B", "_pad1": "xx", "humidity": "B"}
+class Pad(binmap.BinmapDataclass):
+    temp: types.unsignedchar = 0
+    pad: types.pad = binmap.padding(2)
+    humidity: types.unsignedchar = 0
 
 
-class AdvancedPad(binmap.Binmap):
-    _datafields = {
-        "temp": "B",
-        "_pad1": "xx",
-        "humidity": "B",
-        "_pad2": "3x",
-        "_pad3": "x",
-    }
+class AdvancedPad(binmap.BinmapDataclass):
+    temp: types.unsignedchar = 0
+    _pad1: types.pad = binmap.padding(2)
+    humidity: types.unsignedchar = 0
+    _pad2: types.pad = binmap.padding(3)
+    _pad3: types.pad = binmap.padding(1)
 
 
 class TestPadClass:
     def test_create_pad(self):
         p = Pad(temp=10, humidity=60)
         with pytest.raises(AttributeError) as excinfo:
-            p._pad1
-        assert "Padding (_pad1) is not readable" in str(excinfo)
+            p.pad
+        assert "Padding (pad) is not readable" in str(excinfo)
         assert p.temp == 10
         assert p.humidity == 60
-        assert str(p) == "Pad, temp=10, humidity=60"
+        assert str(p) == "Pad(temp=10, humidity=60)"
 
     def test_parse_data(self):
         p = Pad(b"\x0a\x10\x20\x3c")
         with pytest.raises(AttributeError) as excinfo:
-            p._pad1
+            p.pad
+        assert "Padding (pad) is not readable" in str(excinfo)
         assert p.temp == 10
-        assert "Padding (_pad1) is not readable" in str(excinfo)
         assert p.humidity == 60
 
     def test_pack_data(self):
@@ -258,7 +232,7 @@ class TestPadClass:
         assert "Padding (_pad2) is not readable" in str(excinfo)
         assert p.humidity == 60
         assert p.temp == 10
-        assert str(p) == "AdvancedPad, temp=10, humidity=60"
+        assert str(p) == "AdvancedPad(temp=10, humidity=60)"
 
     def test_advanced_pack_data(self):
         p = AdvancedPad()
@@ -267,71 +241,60 @@ class TestPadClass:
         assert bytes(p) == b"\n\x00\x00<\x00\x00\x00\x00"
 
 
-class EnumClass(binmap.Binmap):
-    _datafields = {
-        "temp": "B",
-        "wind": "B",
-    }
+class WindEnum(IntEnum):
+    North = 0
+    East = 1
+    South = 2
+    West = 3
 
-    _enums = {"wind": {0: "North", 1: "East", 2: "South", 4: "West"}}
+
+class EnumClass(binmap.BinmapDataclass):
+    temp: types.unsignedchar = 0
+    wind: types.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
 
 
 class TestEnumClass:
     def test_create_class(self):
-        pc = EnumClass()
-        assert pc
-        assert EnumClass.SOUTH == 2
+        ec = EnumClass()
+        assert ec
 
     def test_get_enum(self):
-        pc = EnumClass(temp=10, wind=2)
-        assert pc.wind == "South"
-        assert str(pc) == "EnumClass, temp=10, wind=South"
+        ec = EnumClass(temp=10, wind=2)
+        assert ec.wind == WindEnum.South
+        assert str(ec) == "EnumClass(temp=10, wind=2)"
 
     def test_enum_binary(self):
-        pc = EnumClass(b"\x0a\x02")
-        assert pc.wind == "South"
-        assert str(pc) == "EnumClass, temp=10, wind=South"
+        ec = EnumClass(b"\x0a\x02")
+        assert ec.wind == WindEnum.South
+        assert str(ec) == "EnumClass(temp=10, wind=2)"
 
     def test_set_named_enum(self):
-        pc = EnumClass()
-        pc.wind = "South"
-        assert bytes(pc) == b"\x00\x02"
+        ec = EnumClass()
+        ec.wind = WindEnum.South
+        assert bytes(ec) == b"\x00\x02"
+
+        with pytest.raises(KeyError) as excinfo:
+            ec.wind = "Norhtwest"
+        assert "'Norhtwest'" in str(excinfo)
 
         with pytest.raises(ValueError) as excinfo:
-            pc.wind = "Norhtwest"
-        assert "Unknown enum or value" in str(excinfo)
-
-        with pytest.raises(ValueError) as excinfo:
-            pc.wind = 1.2
-        assert "Unknown enum or value" in str(excinfo)
-
-    def test_colliding_enums(self):
-        with pytest.raises(ValueError) as excinfo:
-
-            class EnumCollide(binmap.Binmap):
-                _datafields = {
-                    "wind1": "B",
-                    "wind2": "B",
-                }
-                _enums = {
-                    "wind1": {0: "North"},
-                    "wind2": {2: "North"},
-                }
-
-        assert "North already defined" in str(excinfo)
+            ec.wind = 1.2
+        assert "1.2 is not a valid WindEnum" in str(excinfo)
 
 
-class ConstValues(binmap.Binmap):
-    _datafields = {"datatype": "B", "status": "B"}
-    _constants = {"datatype": 0x15}
+class ConstValues(binmap.BinmapDataclass):
+    datatype: types.unsignedchar = binmap.constant(0x15)
+    status: types.unsignedchar = 0
 
 
 class TestConstValues:
     def test_create_class(self):
         c = ConstValues()
-        with pytest.raises(AttributeError) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             ConstValues(datatype=0x14, status=1)
-        assert "datatype is a constant" in str(excinfo)
+        assert "__init__() got an unexpected keyword argument 'datatype'" in str(
+            excinfo
+        )
         assert c.datatype == 0x15
 
     def test_set_value(self):
@@ -352,27 +315,25 @@ class TestConstValues:
         assert c.status == 1
 
 
-class AllDatatypes(binmap.Binmap):
-    _datafields = {
-        "_pad": "x",
-        "char": "c",
-        "signedchar": "b",
-        "unsignedchar": "B",
-        "boolean": "?",
-        "short": "h",
-        "unsignedshort": "H",
-        "integer": "i",
-        "unsignedint": "I",
-        "long": "l",
-        "unsignedlong": "L",
-        "longlong": "q",
-        "unsignedlonglong": "Q",
-        "halffloat": "e",
-        "floating": "f",
-        "double": "d",
-        "string": "10s",
-        "pascalstring": "15p",
-    }
+class AllDatatypes(binmap.BinmapDataclass):
+    _pad: types.pad = binmap.padding(1)
+    char: types.char = b"\x00"
+    signedchar: types.signedchar = 0
+    unsignedchar: types.unsignedchar = 0
+    boolean: types.boolean = False
+    short: types.short = 0
+    unsignedshort: types.unsignedshort = 0
+    integer: types.integer = 0
+    unsignedint: types.unsignedinteger = 0
+    long: types.long = 0
+    unsignedlong: types.unsignedlong = 0
+    longlong: types.longlong = 0
+    unsignedlonglong: types.unsignedlonglong = 0
+    halffloat: types.halffloat = 0.0
+    floating: types.floating = 0.0
+    double: types.double = 0.0
+    string: types.string = binmap.stringfield(10)
+    pascalstring: types.pascalstring = binmap.stringfield(15)
 
 
 class TestAllDatatypes:
