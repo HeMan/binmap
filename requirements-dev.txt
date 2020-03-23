@@ -1,5 +1,5 @@
 black
-bumpversion
+bump2version
 flake8
 flake8-black
 flake8-builtins
