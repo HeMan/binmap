@@ -13,6 +13,7 @@ setup(
     author_email="jimmy.hedman@gmail.com",
     description="A base class for creating binary parsing and packing classes",
     long_description=long_description,
+    long_description_content_type="text/x-rst",
     url="https://github.com/HeMan/binmap",
     packages=find_packages(),
     classifiers=[
