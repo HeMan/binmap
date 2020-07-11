@@ -1,11 +1,18 @@
 from setuptools import find_packages, setup
 
+from os import path
+
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, "README.rst")) as f:
+    long_description = f.read()
+
 setup(
     name="binmap",
-    version="1.0.0",
+    version="1.0.1",
     author="Jimmy Hedman",
     author_email="jimmy.hedman@gmail.com",
     description="A base class for creating binary parsing and packing classes",
+    long_description=long_description,
     url="https://github.com/HeMan/binmap",
     packages=find_packages(),
     classifiers=[
