@@ -206,8 +206,6 @@ class BinmapDataclass:
         Initialises fields from a binary string
         :param bytes _binarydata: Binary string that will be unpacked.
         """
-        if _binarydata != b"":
-            self.frombytes(_binarydata)
         # Kludgy hack to keep order
         for f in dataclasses.fields(self):
             self._datafieldsmap.update({f.name: f})
@@ -220,6 +218,8 @@ class BinmapDataclass:
                 del self.__dict__[f.name]
                 self.__dict__.update({f.name: val})
             self._datafields.append(f.name)
+        if _binarydata != b"":
+            self.frombytes(_binarydata)
 
     def frombytes(self, value: bytes):
         """
@@ -232,4 +232,5 @@ class BinmapDataclass:
                 if arg != self._datafieldsmap[name].default:
                     raise ValueError("Constant doesn't match binary data")
 
-            setattr(self, name, arg)
+            else:
+                setattr(self, name, arg)
