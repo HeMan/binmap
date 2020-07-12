@@ -424,6 +424,14 @@ class TestInheritance:
 
         assert bytes(ch) == b"\x0a\x28"
 
+    def test_simple_inheritance_binary(self):
+        class Child(Temp):
+            humidity: types.unsignedchar = 0
+
+        ch = Child(b"\x10\x30")
+        assert ch.temp == 16
+        assert ch.humidity == 48
+
     def test_const_inheritance(self):
         class Child(ConstValues):
             humidity: types.unsignedchar = 0
@@ -440,6 +448,15 @@ class TestInheritance:
         assert ch.humidity == 40
         assert bytes(ch) == b"\x15\x01\x28"
 
+    def test_const_inheritance_binary(self):
+        class Child(ConstValues):
+            humidity: types.unsignedchar = 0
+
+        ch = Child(b"\x15\x05\x30")
+        assert ch.datatype == 0x15
+        assert ch.status == 5
+        assert ch.humidity == 48
+
     def test_enum_inheritanec(self):
         class Child(EnumClass):
             humidity: types.unsignedchar = 0
@@ -453,3 +470,12 @@ class TestInheritance:
         assert ch.wind == WindEnum.West
         assert ch.humidity == 40
         assert bytes(ch) == b"\x0a\x03\x28"
+
+    def test_enum_inheritance_binary(self):
+        class Child(EnumClass):
+            humidity: types.unsignedchar = 0
+
+        ch = Child(b"\x12\x01\x25")
+        assert ch.temp == 18
+        assert ch.wind == WindEnum.East
+        assert ch.humidity == 37
