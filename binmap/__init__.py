@@ -29,7 +29,18 @@ class BinField(BaseDescriptor):
 
     def __set__(self, obj, value):
         type_hints = get_type_hints(obj)
-        struct.pack(datatypemapping[type_hints[self.name]][1], value)
+        if self.name in type_hints:
+            struct.pack(datatypemapping[type_hints[self.name]][1], value)
+        else:
+            found = False
+            for base in type(obj).__bases__:
+                type_hints = get_type_hints(base)
+                if self.name in type_hints:
+                    struct.pack(datatypemapping[type_hints[self.name]][1], value)
+                    found = True
+
+            if not found:
+                raise ValueError(self.name)
         obj.__dict__[self.name] = value
 
 
