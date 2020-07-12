@@ -408,3 +408,48 @@ class TestAllDatatypes:
         assert sc.double == 1.3000184467440736e24
         assert sc.string == b"hi world  "
         assert sc.pascalstring == b"hi pascal"
+
+
+class TestInheritance:
+    def test_simple_inheritance(self):
+        class Child(Temp):
+            humidity: types.unsignedchar = 0
+
+        ch = Child()
+        ch.temp = 10
+        ch.humidity = 40
+
+        assert ch.temp == 10
+        assert ch.humidity == 40
+
+        assert bytes(ch) == b"\x0a\x28"
+
+    def test_const_inheritance(self):
+        class Child(ConstValues):
+            humidity: types.unsignedchar = 0
+
+        ch = Child()
+        with pytest.raises(AttributeError) as excinfo:
+            ch.datatype = 14
+        assert "datatype is a constant" in str(excinfo)
+        ch.status = 1
+        ch.humidity = 40
+
+        assert ch.datatype == 0x15
+        assert ch.status == 1
+        assert ch.humidity == 40
+        assert bytes(ch) == b"\x15\x01\x28"
+
+    def test_enum_inheritanec(self):
+        class Child(EnumClass):
+            humidity: types.unsignedchar = 0
+
+        ch = Child()
+        ch.temp = 10
+        ch.wind = WindEnum.West
+        ch.humidity = 40
+
+        assert ch.temp == 10
+        assert ch.wind == WindEnum.West
+        assert ch.humidity == 40
+        assert bytes(ch) == b"\x0a\x03\x28"
