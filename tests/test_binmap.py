@@ -1,5 +1,5 @@
 import struct
-from enum import IntEnum
+from enum import IntEnum, IntFlag
 
 import pytest
 
@@ -246,11 +246,21 @@ class WindEnum(IntEnum):
     East = 1
     South = 2
     West = 3
+    
+    
+class FlagEnum(IntFlag):
+    R = 4
+    W = 2
+    X = 1
 
 
 class EnumClass(binmap.BinmapDataclass):
     temp: types.unsignedchar = 0
     wind: types.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
+
+
+class FlagClass(binmap.BinmapDataclass):
+    perm: types.unsignedchar = binmap.enumfield(FlagEnum, default=0)
 
 
 class TestEnumClass:
@@ -280,6 +290,25 @@ class TestEnumClass:
         with pytest.raises(ValueError) as excinfo:
             ec.wind = 1.2
         assert "1.2 is not a valid WindEnum" in str(excinfo)
+
+
+class TestFlagClass:
+    def test_create_class(self):
+        fc = FlagClass()
+        assert fc
+
+    def test_get_enum(self):
+        fc = FlagClass(perm=6)
+        assert fc.perm & FlagEnum.R
+        assert fc.perm & (FlagEnum.R | FlagEnum.W)
+        assert not fc.perm & FlagEnum.X
+        assert str(fc) == "FlagClass(perm=6)"
+
+    def test_enum_binary(self):
+        fc = FlagClass(b"\x03")
+        assert fc.perm & FlagEnum.W
+        assert fc.perm & (FlagEnum.W | FlagEnum.X)
+        assert not fc.perm & FlagEnum.R
 
 
 class ConstValues(binmap.BinmapDataclass):
