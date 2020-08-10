@@ -246,8 +246,8 @@ class WindEnum(IntEnum):
     East = 1
     South = 2
     West = 3
-    
-    
+
+
 class FlagEnum(IntFlag):
     R = 4
     W = 2
