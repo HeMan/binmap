@@ -170,6 +170,31 @@ class TestTempHumClass:
         assert th2 != th4
 
 
+class Strings(binmap.BinmapDataclass):
+    identity: types.string = binmap.stringfield(10)
+
+
+class StringWithDefault(binmap.BinmapDataclass):
+    defaultstring: types.string = binmap.stringfield(10, default=b"hellohello")
+
+
+class TestStrings:
+    def test_strings(self):
+        s = Strings()
+        assert (
+            str(s)
+            == "Strings(identity=b'\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')"
+        )
+        s1 = Strings(identity=b"1234567890")
+        assert s1.identity == b"1234567890"
+
+    def test_defaultstring(self):
+        sd = StringWithDefault()
+        assert str(sd) == "StringWithDefault(defaultstring=b'hellohello')"
+        sd1 = StringWithDefault(defaultstring=b"worldworld")
+        assert sd1.defaultstring == b"worldworld"
+
+
 class Pad(binmap.BinmapDataclass):
     temp: types.unsignedchar = 0
     pad: types.pad = binmap.padding(2)

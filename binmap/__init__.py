@@ -126,9 +126,7 @@ def constant(value: Union[int, float, str]) -> dataclasses.Field:
     return dataclasses.field(default=value, init=False, metadata={"constant": True})
 
 
-def stringfield(
-    length: int = 1, default: bytes = b"", fillchar: bytes = b" "
-) -> dataclasses.Field:
+def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
     """
     Field generator function for string fields.
 
@@ -138,10 +136,8 @@ def stringfield(
     :return: dataclass field
     """
     if default == b"":
-        _default = b"\x00" * length
-    else:
-        _default = bytes(f"{default:{fillchar}<{length}}")
-    return dataclasses.field(default=_default, metadata={"length": length})
+        default = b"\x00" * length
+    return dataclasses.field(default=default, metadata={"length": length})
 
 
 def enumfield(
