@@ -1,6 +1,6 @@
 import dataclasses
 import struct
-from enum import IntEnum
+from enum import IntEnum, IntFlag
 from typing import Dict, Tuple, Type, TypeVar, Union, get_type_hints
 
 from binmap import types
@@ -144,7 +144,9 @@ def stringfield(
     return dataclasses.field(default=_default, metadata={"length": length})
 
 
-def enumfield(enumclass: IntEnum, default: IntEnum = None) -> dataclasses.Field:
+def enumfield(
+    enumclass: Union[IntEnum, IntFlag], default: Union[IntEnum, IntFlag, int] = None
+) -> dataclasses.Field:
     """
     Field generator function for enum field
 
