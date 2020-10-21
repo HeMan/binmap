@@ -126,6 +126,16 @@ def constant(value: Union[int, float, str]) -> dataclasses.Field:
     return dataclasses.field(default=value, init=False, metadata={"constant": True})
 
 
+def autolength(offset: int = 0) -> dataclasses.Field:
+    """
+    Field generator function for autolength fields
+
+    :param offset: offset for the lenght calculation
+    :return: dataclass field
+    """
+    return dataclasses.field(default=offset, init=False, metadata={"autolength": True})
+
+
 def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
     """
     Field generator function for string fields.
@@ -180,6 +190,8 @@ class BinmapDataclass:
                 _base = ConstField
             elif "enum" in field_.metadata:
                 _base = EnumField
+            elif "autolength" in field_.metadata:
+                _base = ConstField
             setattr(cls, field_.name, _base(name=field_.name))
             if type_hints[field_.name] is types.pad:
                 _type = field_.default * _type
@@ -211,6 +223,10 @@ class BinmapDataclass:
                 continue
             if "constant" in f.metadata:
                 self.__dict__.update({f.name: f.default})
+            if "autolength" in f.metadata:
+                self.__dict__.update(
+                    {f.name: struct.calcsize(self._formatstring) + f.default}
+                )
             else:
                 val = getattr(self, f.name)
                 del self.__dict__[f.name]

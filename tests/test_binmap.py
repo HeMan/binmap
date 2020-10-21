@@ -533,3 +533,50 @@ class TestInheritance:
         assert ch.temp == 18
         assert ch.wind == WindEnum.East
         assert ch.humidity == 37
+
+
+class AutoLength(binmap.BinmapDataclass):
+    length: types.unsignedchar = binmap.autolength()
+    temp: types.signedchar = 0
+
+
+class TestAutolength:
+    def test_autolength(self):
+        al = AutoLength()
+        al.temp = 10
+
+        assert al.length == 2
+        assert str(al) == "AutoLength(length=2, temp=10)"
+        assert bytes(al) == b"\x02\x0a"
+
+    def test_autolength_inheritance(self):
+        class Child(AutoLength):
+            humidity: types.unsignedchar = 0
+
+        alc = Child()
+        alc.temp = 20
+        alc.humidity = 40
+        assert bytes(alc) == b"\x03\x14\x28"
+
+        assert alc.length == 3
+
+    def test_autolength_offset(self):
+        class AutoLengthOffset(binmap.BinmapDataclass):
+            length: types.unsignedchar = binmap.autolength(offset=-1)
+            temp: types.signedchar = 0
+
+        alo = AutoLengthOffset()
+        alo.temp = 10
+
+        assert alo.length == 1
+        assert bytes(alo) == b"\x01\n"
+
+        class AutoLengthOffsetPositive(binmap.BinmapDataclass):
+            length: types.unsignedchar = binmap.autolength(offset=1)
+            temp: types.signedchar = 0
+
+        alop = AutoLengthOffsetPositive()
+        alop.temp = 10
+        assert bytes(alop) == b"\x03\n"
+
+        assert alop.length == 3
