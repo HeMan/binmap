@@ -540,6 +540,16 @@ class AutoLength(binmap.BinmapDataclass):
     temp: types.signedchar = 0
 
 
+class AutoLengthOffset(binmap.BinmapDataclass):
+    length: types.unsignedchar = binmap.autolength(offset=-1)
+    temp: types.signedchar = 0
+
+
+class AutoLengthOffsetPositive(binmap.BinmapDataclass):
+    length: types.unsignedchar = binmap.autolength(offset=1)
+    temp: types.signedchar = 0
+
+
 class TestAutolength:
     def test_autolength(self):
         al = AutoLength()
@@ -561,19 +571,11 @@ class TestAutolength:
         assert alc.length == 3
 
     def test_autolength_offset(self):
-        class AutoLengthOffset(binmap.BinmapDataclass):
-            length: types.unsignedchar = binmap.autolength(offset=-1)
-            temp: types.signedchar = 0
-
         alo = AutoLengthOffset()
         alo.temp = 10
 
         assert alo.length == 1
         assert bytes(alo) == b"\x01\n"
-
-        class AutoLengthOffsetPositive(binmap.BinmapDataclass):
-            length: types.unsignedchar = binmap.autolength(offset=1)
-            temp: types.signedchar = 0
 
         alop = AutoLengthOffsetPositive()
         alop.temp = 10
