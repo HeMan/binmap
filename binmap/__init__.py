@@ -245,6 +245,8 @@ class BinmapDataclass:
             if "constant" in self._datafieldsmap[name].metadata:
                 if arg != self._datafieldsmap[name].default:
                     raise ValueError("Constant doesn't match binary data")
-
+            elif "autolength" in self._datafieldsmap[name].metadata:
+                if arg != getattr(self, name):
+                    raise ValueError("Length doesn't match")
             else:
                 setattr(self, name, arg)

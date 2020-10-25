@@ -559,6 +559,14 @@ class TestAutolength:
         assert str(al) == "AutoLength(length=2, temp=10)"
         assert bytes(al) == b"\x02\x0a"
 
+    def test_autolength_bin(self):
+        with pytest.raises(ValueError) as excinfo:
+            AutoLength(b"\x01\x0a")
+        assert "Length doesn't match" in str(excinfo)
+        al = AutoLength(b"\x02\x0a")
+        assert al.length == 2
+        assert al.temp == 10
+
     def test_autolength_inheritance(self):
         class Child(AutoLength):
             humidity: types.unsignedchar = 0
