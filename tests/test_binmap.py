@@ -590,3 +590,23 @@ class TestAutolength:
         assert bytes(alop) == b"\x03\n"
 
         assert alop.length == 3
+
+
+class CalculatedField(binmap.BinmapDataclass):
+    temp: types.signedchar = 0
+    hum: types.unsignedchar = 0
+
+    def chk(self):
+        return (self.temp + self.hum) & 0xFF
+
+    checksum: types.unsignedchar = binmap.calculatedfield(chk)
+
+
+class TestCalculatedField:
+    def test_calculated_field(self):
+        cf = CalculatedField()
+        cf.temp = -27
+        cf.hum = 10
+
+        assert cf.checksum == 239
+        assert bytes(cf) == b"\xe5\x0a\xef"

@@ -1,7 +1,8 @@
 import dataclasses
 import struct
 from enum import IntEnum, IntFlag
-from typing import Dict, Tuple, Type, TypeVar, Union, get_type_hints
+from functools import partial
+from typing import Callable, Dict, Tuple, Type, TypeVar, Union, get_type_hints
 
 from binmap import types
 
@@ -78,6 +79,20 @@ class ConstField(BinField):
             raise AttributeError(f"{self.name} is a constant")
         else:
             obj.__dict__[self.name] = value
+
+
+class CalculatedField(BinField):
+    def __init__(self, name, function):
+        self.name = name
+        self.function = function
+
+    def __get__(self, obj, owner):
+        """Getting values fails"""
+        return self.function(obj)
+
+    def __set__(self, obj, value):
+        """Setting values does nothing"""
+        pass
 
 
 datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
@@ -163,6 +178,10 @@ def enumfield(
     return dataclasses.field(default=default, metadata={"enum": enumclass})
 
 
+def calculatedfield(function: Callable) -> dataclasses.Field:
+    return dataclasses.field(default=0, metadata={"function": function})
+
+
 @dataclasses.dataclass
 class BinmapDataclass:
     """
@@ -192,6 +211,8 @@ class BinmapDataclass:
                 _base = EnumField
             elif "autolength" in field_.metadata:
                 _base = ConstField
+            elif "function" in field_.metadata:
+                _base = partial(CalculatedField, function=field_.metadata["function"])
             setattr(cls, field_.name, _base(name=field_.name))
             if type_hints[field_.name] is types.pad:
                 _type = field_.default * _type
@@ -205,10 +226,16 @@ class BinmapDataclass:
         :return: Binary string packed.
         :rtype: bytes
         """
+        values = []
+        for k, v in self.__dict__.items():
+            if k not in ["_formatstring"]:
+                if callable(v):
+                    values.append(v(self))
+                else:
+                    values.append(v)
         return struct.pack(
-            # TODO: use datclass.fields
             self._formatstring,
-            *(v for k, v in self.__dict__.items() if k not in ["_formatstring"]),
+            *values,
         )
 
     def __post_init__(self, _binarydata: bytes):
@@ -227,6 +254,8 @@ class BinmapDataclass:
                 self.__dict__.update(
                     {f.name: struct.calcsize(self._formatstring) + f.default}
                 )
+            if "function" in f.metadata:
+                self.__dict__.update({f.name: f.metadata["function"]})
             else:
                 val = getattr(self, f.name)
                 del self.__dict__[f.name]
