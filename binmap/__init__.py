@@ -46,7 +46,9 @@ class BinField(BaseDescriptor):
 
 
 class PaddingField(BaseDescriptor):
-    """PaddingField descriptor is used to "pad" data with values unused for real data"""
+    """PaddingField descriptor is used to "pad" data with values unused for real data
+
+    :raises AttributeError: when trying to read, since it's only padding."""
 
     def __get__(self, obj, owner):
         """Getting values fails"""
@@ -72,7 +74,10 @@ class EnumField(BinField):
 
 
 class ConstField(BinField):
-    """ConstField descriptor keeps it's value"""
+    """ConstField descriptor keeps it's value
+
+    :raises AttributeError: Since it's a constant it raises and error when
+      trying to set"""
 
     def __set__(self, obj, value):
         if self.name in obj.__dict__:
