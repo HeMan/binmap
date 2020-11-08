@@ -8,7 +8,7 @@ with open(path.join(this_directory, "README.rst")) as f:
 
 setup(
     name="binmap",
-    version="1.0.2",
+    version="1.1.0",
     author="Jimmy Hedman",
     author_email="jimmy.hedman@gmail.com",
     description="A base class for creating binary parsing and packing classes",
