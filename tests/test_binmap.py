@@ -602,6 +602,21 @@ class CalculatedField(binmap.BinmapDataclass):
     checksum: types.unsignedchar = binmap.calculatedfield(chk)
 
 
+class CalculatedFieldLast(binmap.BinmapDataclass):
+    temp: types.signedchar = 0
+
+    def chk_last(self):
+        checksum = 0
+        for k, v in self.__dict__.items():
+            if k.startswith("_") or callable(v):
+                continue
+            checksum += v
+        return checksum & 0xFF
+
+    checksum: types.unsignedchar = binmap.calculatedfield(chk_last, last=True)
+    hum: types.unsignedchar = 0
+
+
 class TestCalculatedField:
     def test_calculated_field(self):
         cf = CalculatedField()
@@ -620,3 +635,51 @@ class TestCalculatedField:
         with pytest.raises(ValueError) as excinfo:
             CalculatedField(b"\xe4\x18\x00")
         assert "Wrong calculated value" in str(excinfo)
+
+    def test_calculated_field_last(self):
+
+        cfl = CalculatedFieldLast()
+        cfl.temp = 10
+        cfl.hum = 20
+
+        assert cfl.checksum == 30
+        assert bytes(cfl) == b"\x0a\x14\x1e"
+
+    def test_calculated_field_last_inherit(self):
+        class CalculatedFieldLastInherit(CalculatedFieldLast):
+            lux: types.unsignedinteger = 0
+
+        cfli = CalculatedFieldLastInherit()
+        cfli.temp = 10
+        cfli.hum = 20
+        cfli.lux = 401
+        assert bytes(cfli) == b"\x0a\x14\x00\x00\x01\x91\xaf"
+
+        with pytest.raises(ValueError) as excinfo:
+            CalculatedFieldLastInherit(b"\x0b\x20\x00\x00\x01\x30\x00")
+        assert "Wrong calculated value" in str(excinfo)
+
+    def test_calculated_field_multi_last(self):
+        with pytest.raises(ValueError) as excinfo:
+
+            class CalculatedFieldMultiLast(binmap.BinmapDataclass):
+                temp: types.unsignedchar = 0
+
+                def chk(self):
+                    return 0
+
+                checksum1: types.unsignedchar = binmap.calculatedfield(chk, last=True)
+                checksum2: types.unsignedchar = binmap.calculatedfield(chk, last=True)
+
+        assert "Can't have more than one last" in str(excinfo)
+
+    def test_calculated_field_multi_last_inherit(self):
+        with pytest.raises(ValueError) as excinfo:
+
+            class CalculatedFieldMultiLastInherit(CalculatedFieldLast):
+                def chk2(self):
+                    return 0
+
+                checksum2: types.unsignedchar = binmap.calculatedfield(chk2, last=True)
+
+        assert "Can't have more than one last" in str(excinfo)
