@@ -2,7 +2,7 @@ import dataclasses
 import struct
 from enum import IntEnum, IntFlag
 from functools import partial
-from typing import Callable, Dict, Tuple, Type, TypeVar, Union, get_type_hints
+from typing import Callable, Dict, List, Tuple, Type, TypeVar, Union, get_type_hints
 
 from binmap import types
 
@@ -188,8 +188,14 @@ class BinmapDataclass:
     Dataclass that does the converting to and from binary data
     """
 
-    __formatstring: str = dataclasses.field(default="", repr=False, init=False)
     __binarydata: dataclasses.InitVar[bytes] = b""
+    __datafields: List[str] = dataclasses.field(
+        default_factory=list, repr=False, init=False
+    )
+    __datafieldsmap: Dict = dataclasses.field(
+        default_factory=dict, repr=False, init=False
+    )
+    __formatstring: str = dataclasses.field(default="", repr=False, init=False)
 
     def __init_subclass__(cls, byteorder: str = ">"):
         """
@@ -199,8 +205,6 @@ class BinmapDataclass:
         dataclasses.dataclass(cls)
         type_hints = get_type_hints(cls)
 
-        cls.__datafields = []
-        cls.__datafieldsmap = {}
         cls.__formatstring = byteorder
 
         for field_ in dataclasses.fields(cls):
@@ -230,7 +234,7 @@ class BinmapDataclass:
         """
         values = []
         for k, v in self.__dict__.items():
-            if k not in ["__formatstring"]:
+            if not k.startswith("_BinmapDataclass__"):
                 if callable(v):
                     values.append(v(self))
                 else:
