@@ -178,14 +178,14 @@ def enumfield(
     return dataclasses.field(default=default, metadata={"enum": enumclass})
 
 
+def calculatedfield(function: Callable, last=False) -> dataclasses.Field:
     """
     Field generator function for calculated fields
 
     :param Callable function: function that calculates the field.
     :return: dataclass field
     """
-def calculatedfield(function: Callable) -> dataclasses.Field:
-    return dataclasses.field(default=0, metadata={"function": function})
+    return dataclasses.field(default=0, metadata={"function": function, "last": last})
 
 
 @dataclasses.dataclass
@@ -213,6 +213,7 @@ class BinmapDataclass:
 
         cls.__formatstring = byteorder
 
+        lastfield = ""
         for field_ in dataclasses.fields(cls):
             if field_.name.startswith("_BinmapDataclass__"):
                 continue
@@ -230,7 +231,13 @@ class BinmapDataclass:
                 _type = field_.default * _type
             if type_hints[field_.name] in (types.string, types.pascalstring, str):
                 _type = str(field_.metadata["length"]) + _type
-            cls.__formatstring += _type
+            if "last" in field_.metadata and field_.metadata["last"]:
+                if lastfield != "":
+                    raise ValueError("Can't have more than one last")
+                lastfield = _type
+            else:
+                cls.__formatstring += _type
+        cls.__formatstring += lastfield
 
     def __bytes__(self):
         """
@@ -239,12 +246,19 @@ class BinmapDataclass:
         :rtype: bytes
         """
         values = []
+        lastvalue = None
         for k, v in self.__dict__.items():
-            if not k.startswith("_BinmapDataclass__"):
-                if callable(v):
-                    values.append(v(self))
-                else:
-                    values.append(v)
+            if k.startswith("_BinmapDataclass__"):
+                continue
+            if callable(v):
+                v = v(self)
+            if "last" in self.__datafieldsmap[k].metadata and self.__datafieldsmap[k].metadata["last"]:
+                lastvalue = v
+                continue
+            values.append(v)
+        if lastvalue is not None:
+            values.append(lastvalue)
+
         return struct.pack(
             self.__formatstring,
             *values,
