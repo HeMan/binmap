@@ -306,6 +306,7 @@ class TestEnumClass:
     def test_set_named_enum(self):
         ec = EnumClass()
         ec.wind = WindEnum.South
+        assert ec.wind == 2
         assert bytes(ec) == b"\x00\x02"
 
         with pytest.raises(KeyError) as excinfo:
@@ -315,6 +316,13 @@ class TestEnumClass:
         with pytest.raises(ValueError) as excinfo:
             ec.wind = 1.2
         assert "1.2 is not a valid WindEnum" in str(excinfo)
+
+    def test_set_numeric_enum(self):
+        ec = EnumClass()
+        ec.wind = 2
+        assert ec.wind == WindEnum.South
+        assert bytes(ec) == b"\x00\x02"
+        assert str(ec) == "EnumClass(temp=0, wind=2)"
 
 
 class TestFlagClass:
