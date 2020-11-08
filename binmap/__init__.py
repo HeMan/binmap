@@ -188,8 +188,8 @@ class BinmapDataclass:
     Dataclass that does the converting to and from binary data
     """
 
-    _formatstring = ""
-    _binarydata: dataclasses.InitVar[bytes] = b""
+    __formatstring: str = dataclasses.field(default="", repr=False, init=False)
+    __binarydata: dataclasses.InitVar[bytes] = b""
 
     def __init_subclass__(cls, byteorder: str = ">"):
         """
@@ -199,11 +199,13 @@ class BinmapDataclass:
         dataclasses.dataclass(cls)
         type_hints = get_type_hints(cls)
 
-        cls._datafields = []
-        cls._datafieldsmap = {}
-        cls._formatstring = byteorder
+        cls.__datafields = []
+        cls.__datafieldsmap = {}
+        cls.__formatstring = byteorder
 
         for field_ in dataclasses.fields(cls):
+            if field_.name.startswith("_BinmapDataclass__"):
+                continue
             _base, _type = datatypemapping[type_hints[field_.name]]
             if "constant" in field_.metadata:
                 _base = ConstField
@@ -218,7 +220,7 @@ class BinmapDataclass:
                 _type = field_.default * _type
             if type_hints[field_.name] in (types.string, types.pascalstring, str):
                 _type = str(field_.metadata["length"]) + _type
-            cls._formatstring += _type
+            cls.__formatstring += _type
 
     def __bytes__(self):
         """
@@ -228,13 +230,13 @@ class BinmapDataclass:
         """
         values = []
         for k, v in self.__dict__.items():
-            if k not in ["_formatstring"]:
+            if k not in ["__formatstring"]:
                 if callable(v):
                     values.append(v(self))
                 else:
                     values.append(v)
         return struct.pack(
-            self._formatstring,
+            self.__formatstring,
             *values,
         )
 
@@ -245,14 +247,16 @@ class BinmapDataclass:
         """
         # Kludgy hack to keep order
         for f in dataclasses.fields(self):
-            self._datafieldsmap.update({f.name: f})
+            if f.name.startswith("_BinmapDataclass__"):
+                continue
+            self.__datafieldsmap.update({f.name: f})
             if "padding" in f.metadata:
                 continue
             if "constant" in f.metadata:
                 self.__dict__.update({f.name: f.default})
             if "autolength" in f.metadata:
                 self.__dict__.update(
-                    {f.name: struct.calcsize(self._formatstring) + f.default}
+                    {f.name: struct.calcsize(self.__formatstring) + f.default}
                 )
             if "function" in f.metadata:
                 self.__dict__.update({f.name: f.metadata["function"]})
@@ -260,7 +264,7 @@ class BinmapDataclass:
                 val = getattr(self, f.name)
                 del self.__dict__[f.name]
                 self.__dict__.update({f.name: val})
-            self._datafields.append(f.name)
+            self.__datafields.append(f.name)
         if _binarydata != b"":
             self.frombytes(_binarydata)
 
@@ -269,12 +273,12 @@ class BinmapDataclass:
         Unpacks value to each field
         :param bytes value: binary string to unpack
         """
-        args = struct.unpack(self._formatstring, value)
-        for arg, name in zip(args, self._datafields):
-            if "constant" in self._datafieldsmap[name].metadata:
-                if arg != self._datafieldsmap[name].default:
+        args = struct.unpack(self.__formatstring, value)
+        for arg, name in zip(args, self.__datafields):
+            if "constant" in self.__datafieldsmap[name].metadata:
+                if arg != self.__datafieldsmap[name].default:
                     raise ValueError("Constant doesn't match binary data")
-            elif "autolength" in self._datafieldsmap[name].metadata:
+            elif "autolength" in self.__datafieldsmap[name].metadata:
                 if arg != getattr(self, name):
                     raise ValueError("Length doesn't match")
             else:
