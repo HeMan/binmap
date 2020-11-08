@@ -87,17 +87,20 @@ class ConstField(BinField):
 
 
 class CalculatedField(BinField):
+    """CalculatedField calls a function when it's converted to bytes
+
+    :raises AttributeError: Trying to set the value is not allowed"""
+
     def __init__(self, name, function):
         self.name = name
         self.function = function
 
     def __get__(self, obj, owner):
-        """Getting values fails"""
         return self.function(obj)
 
     def __set__(self, obj, value):
-        """Setting values does nothing"""
-        pass
+        if self.name in obj.__dict__:
+            raise AttributeError("Can't set a calculated field")
 
 
 datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {

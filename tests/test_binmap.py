@@ -636,6 +636,12 @@ class TestCalculatedField:
             CalculatedField(b"\xe4\x18\x00")
         assert "Wrong calculated value" in str(excinfo)
 
+    def test_calculated_field_set(self):
+        cf = CalculatedField()
+        with pytest.raises(AttributeError) as excinfo:
+            cf.checksum = 10
+        assert "Can't set a calculated field" in str(excinfo)
+
     def test_calculated_field_last(self):
 
         cfl = CalculatedFieldLast()
