@@ -8,6 +8,5 @@ ipython
 jedi
 pylint
 pytest
-pytest-mock
 tox
 twine
