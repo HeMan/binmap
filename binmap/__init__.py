@@ -178,6 +178,12 @@ def enumfield(
     return dataclasses.field(default=default, metadata={"enum": enumclass})
 
 
+    """
+    Field generator function for calculated fields
+
+    :param Callable function: function that calculates the field.
+    :return: dataclass field
+    """
 def calculatedfield(function: Callable) -> dataclasses.Field:
     return dataclasses.field(default=0, metadata={"function": function})
 
@@ -285,5 +291,8 @@ class BinmapDataclass:
             elif "autolength" in self.__datafieldsmap[name].metadata:
                 if arg != getattr(self, name):
                     raise ValueError("Length doesn't match")
+            elif "function" in self.__datafieldsmap[name].metadata:
+                if arg != self.__datafieldsmap[name].metadata["function"](self):
+                    raise ValueError("Wrong calculated value")
             else:
                 setattr(self, name, arg)

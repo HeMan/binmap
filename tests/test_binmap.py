@@ -596,7 +596,7 @@ class CalculatedField(binmap.BinmapDataclass):
     temp: types.signedchar = 0
     hum: types.unsignedchar = 0
 
-    def chk(self):
+    def chk(self) -> types.unsignedchar:
         return (self.temp + self.hum) & 0xFF
 
     checksum: types.unsignedchar = binmap.calculatedfield(chk)
@@ -610,3 +610,13 @@ class TestCalculatedField:
 
         assert cf.checksum == 239
         assert bytes(cf) == b"\xe5\x0a\xef"
+
+    def test_calculated_field_binary(self):
+        cf = CalculatedField(b"\xe2\x12\xf4")
+        assert cf.temp == -30
+        assert cf.hum == 18
+        assert cf.checksum == 244
+
+        with pytest.raises(ValueError) as excinfo:
+            CalculatedField(b"\xe4\x18\x00")
+        assert "Wrong calculated value" in str(excinfo)
