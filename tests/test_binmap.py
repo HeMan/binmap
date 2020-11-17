@@ -1,4 +1,5 @@
 import struct
+from dataclasses import asdict, astuple
 from enum import IntEnum, IntFlag
 
 import pytest
@@ -69,6 +70,8 @@ class TestTempClass:
         assert t.temp == 10
         assert bytes(t) == b"\x0a"
         assert str(t) == "Temp(temp=10)"
+        assert asdict(t) == {"temp": 10}
+        assert astuple(t) == (10,)
 
     def test_without_argument(self):
         t = Temp()
@@ -131,6 +134,8 @@ class TestTempHumClass:
         assert th.temp == 10
         assert th.humidity == 60
         assert str(th) == "TempHum(temp=10, humidity=60)"
+        assert asdict(th) == {"temp": 10, "humidity": 60}
+        assert astuple(th) == (10, 60)
 
     def test_without_argument(self):
         th = TempHum()
@@ -187,6 +192,8 @@ class TestStrings:
         )
         s1 = Strings(identity=b"1234567890")
         assert s1.identity == b"1234567890"
+        assert asdict(s1) == {"identity": b"1234567890"}
+        assert astuple(s1) == (b"1234567890",)
 
     def test_defaultstring(self):
         sd = StringWithDefault()
@@ -218,6 +225,10 @@ class TestPadClass:
         assert p.temp == 10
         assert p.humidity == 60
         assert str(p) == "Pad(temp=10, humidity=60)"
+        # TODO: make it work with asdict/astuple
+        return
+        assert asdict(p) == {"temp": 10, "humidity": 60}
+        assert astuple(p) == (10, 60)
 
     def test_parse_data(self):
         p = Pad(b"\x0a\x10\x20\x3c")
@@ -297,6 +308,8 @@ class TestEnumClass:
         ec = EnumClass(temp=10, wind=2)
         assert ec.wind == WindEnum.South
         assert str(ec) == "EnumClass(temp=10, wind=2)"
+        assert asdict(ec) == {"temp": 10, "wind": 2}
+        assert astuple(ec) == (10, 2)
 
     def test_enum_binary(self):
         ec = EnumClass(b"\x0a\x02")
@@ -336,6 +349,8 @@ class TestFlagClass:
         assert fc.perm & (FlagEnum.R | FlagEnum.W)
         assert not fc.perm & FlagEnum.X
         assert str(fc) == "FlagClass(perm=6)"
+        assert asdict(fc) == {"perm": 6}
+        assert astuple(fc) == (6,)
 
     def test_enum_binary(self):
         fc = FlagClass(b"\x03")
@@ -367,6 +382,7 @@ class TestConstValues:
         assert c.datatype == 0x15
         assert c.status == 1
         assert bytes(c) == b"\x15\x01"
+        assert asdict(c) == {"datatype": 0x15, "status": 1}
 
     def test_binary_data(self):
         c = ConstValues(b"\x15\x01")
@@ -489,6 +505,8 @@ class TestInheritance:
         assert ch.humidity == 40
 
         assert bytes(ch) == b"\x0a\x28"
+        assert asdict(ch) == {"temp": 10, "humidity": 40}
+        assert astuple(ch) == (10, 40)
 
     def test_simple_inheritance_binary(self):
         class Child(Temp):
@@ -569,6 +587,8 @@ class TestAutolength:
 
         assert al.length == 2
         assert str(al) == "AutoLength(length=2, temp=10)"
+        assert asdict(al) == {"length": 2, "temp": 10}
+        assert astuple(al) == (2, 10)
         assert bytes(al) == b"\x02\x0a"
 
     def test_autolength_bin(self):
@@ -636,6 +656,7 @@ class TestCalculatedField:
         cf.hum = 10
 
         assert str(cf) == "CalculatedField(temp=-27, hum=10, checksum=239)"
+        assert asdict(cf) == {"temp": -27, "hum": 10, "checksum": 239}
         assert cf.checksum == 239
         assert bytes(cf) == b"\xe5\x0a\xef"
 

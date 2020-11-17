@@ -2,7 +2,7 @@ import dataclasses
 import struct
 from enum import IntEnum, IntFlag
 from functools import partial
-from typing import Callable, Dict, List, Tuple, Type, Union, get_type_hints
+from typing import Callable, ClassVar, Dict, List, Tuple, Type, Union, get_type_hints
 
 from binmap import types as b_types
 
@@ -199,13 +199,9 @@ class BinmapDataclass:
     """
 
     __binarydata: dataclasses.InitVar[bytes] = b""
-    __datafields: List[str] = dataclasses.field(
-        default_factory=list, repr=False, init=False
-    )
-    __datafieldsmap: Dict = dataclasses.field(
-        default_factory=dict, repr=False, init=False
-    )
-    __formatstring: str = dataclasses.field(default="", repr=False, init=False)
+    __datafields: ClassVar[List[str]]
+    __datafieldsmap: ClassVar[Dict]
+    __formatstring: ClassVar[str]
 
     def __init_subclass__(cls, byteorder: str = ">"):
         """
@@ -216,6 +212,8 @@ class BinmapDataclass:
         type_hints = get_type_hints(cls)
 
         cls.__formatstring = byteorder
+        cls.__datafieldsmap = {}
+        cls.__datafields = []
 
         lastfield = ""
         for field_ in dataclasses.fields(cls):
