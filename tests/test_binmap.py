@@ -631,6 +631,7 @@ class TestCalculatedField:
         cf.temp = -27
         cf.hum = 10
 
+        assert str(cf) == "CalculatedField(temp=-27, hum=10, checksum=239)"
         assert cf.checksum == 239
         assert bytes(cf) == b"\xe5\x0a\xef"
 
