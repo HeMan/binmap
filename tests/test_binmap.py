@@ -464,7 +464,7 @@ class TestAllDatatypes:
         )
         assert (
             str(sc)
-            == "AllDatatypes(char=b'%', signedchar=-2, unsignedchar=5, boolean=True, short=-7, unsignedshort=17, integer=-15, unsignedint=11, long=-2312, unsignedlong=2212, longlong=-1212, unsignedlonglong=4444, halffloat=3.5, floating=3000.0, double=1.3e+24, string=b'helloworld', pascalstring=b'hello pascal')"
+            == "AllDatatypes(char=b'%', signedchar=-2, unsignedchar=5, boolean=True, short=-7, unsignedshort=17, integer=-15, unsignedint=11, long=-2312, unsignedlong=2212, longlong=-1212, unsignedlonglong=4444, halffloat=3.5, floating=3000.0, double=1.3e+24, string=b'helloworld', pascalstring=b'hello pascal')"  # noqa: E501
         )
 
     def test_with_binarydata(self):
