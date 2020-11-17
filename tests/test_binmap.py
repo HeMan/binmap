@@ -446,6 +446,10 @@ class TestAllDatatypes:
             b"\x08\xa4\xff\xff\xff\xff\xff\xff\xfbD\x00\x00\x00\x00\x00\x00\x11\\C\x00E;\x80\x00D\xf14\x92Bg\x0c"
             b"\xe8helloworld\x0chello pascal\x00\x00"
         )
+        assert (
+            str(sc)
+            == "AllDatatypes(char=b'%', signedchar=-2, unsignedchar=5, boolean=True, short=-7, unsignedshort=17, integer=-15, unsignedint=11, long=-2312, unsignedlong=2212, longlong=-1212, unsignedlonglong=4444, halffloat=3.5, floating=3000.0, double=1.3e+24, string=b'helloworld', pascalstring=b'hello pascal')"
+        )
 
     def test_with_binarydata(self):
         sc = AllDatatypes(
