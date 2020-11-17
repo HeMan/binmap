@@ -4,7 +4,7 @@ from enum import IntEnum, IntFlag
 import pytest
 
 import binmap
-from binmap import types
+from binmap import b_types
 
 
 def test_baseclass():
@@ -20,12 +20,12 @@ def test_baseclass_with_keyword():
 
 
 class Temp(binmap.BinmapDataclass):
-    temp: types.unsignedchar = 0
+    temp: b_types.unsignedchar = 0
 
 
 class TempHum(binmap.BinmapDataclass):
-    temp: types.unsignedchar = 0
-    humidity: types.unsignedchar = 0
+    temp: b_types.unsignedchar = 0
+    humidity: b_types.unsignedchar = 0
 
 
 def test_different_classes_eq():
@@ -36,11 +36,11 @@ def test_different_classes_eq():
 
 
 class Bigendian(binmap.BinmapDataclass):
-    value: types.longlong = 0
+    value: b_types.longlong = 0
 
 
 class Littleedian(binmap.BinmapDataclass, byteorder="<"):
-    value: types.longlong = 0
+    value: b_types.longlong = 0
 
 
 def test_dataformats():
@@ -171,11 +171,11 @@ class TestTempHumClass:
 
 
 class Strings(binmap.BinmapDataclass):
-    identity: types.string = binmap.stringfield(10)
+    identity: b_types.string = binmap.stringfield(10)
 
 
 class StringWithDefault(binmap.BinmapDataclass):
-    defaultstring: types.string = binmap.stringfield(10, default=b"hellohello")
+    defaultstring: b_types.string = binmap.stringfield(10, default=b"hellohello")
 
 
 class TestStrings:
@@ -196,17 +196,17 @@ class TestStrings:
 
 
 class Pad(binmap.BinmapDataclass):
-    temp: types.unsignedchar = 0
-    pad: types.pad = binmap.padding(2)
-    humidity: types.unsignedchar = 0
+    temp: b_types.unsignedchar = 0
+    pad: b_types.pad = binmap.padding(2)
+    humidity: b_types.unsignedchar = 0
 
 
 class AdvancedPad(binmap.BinmapDataclass):
-    temp: types.unsignedchar = 0
-    _pad1: types.pad = binmap.padding(2)
-    humidity: types.unsignedchar = 0
-    _pad2: types.pad = binmap.padding(3)
-    _pad3: types.pad = binmap.padding(1)
+    temp: b_types.unsignedchar = 0
+    _pad1: b_types.pad = binmap.padding(2)
+    humidity: b_types.unsignedchar = 0
+    _pad2: b_types.pad = binmap.padding(3)
+    _pad3: b_types.pad = binmap.padding(1)
 
 
 class TestPadClass:
@@ -280,12 +280,12 @@ class FlagEnum(IntFlag):
 
 
 class EnumClass(binmap.BinmapDataclass):
-    temp: types.unsignedchar = 0
-    wind: types.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
+    temp: b_types.unsignedchar = 0
+    wind: b_types.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.East)
 
 
 class FlagClass(binmap.BinmapDataclass):
-    perm: types.unsignedchar = binmap.enumfield(FlagEnum, default=0)
+    perm: b_types.unsignedchar = binmap.enumfield(FlagEnum, default=0)
 
 
 class TestEnumClass:
@@ -345,8 +345,8 @@ class TestFlagClass:
 
 
 class ConstValues(binmap.BinmapDataclass):
-    datatype: types.unsignedchar = binmap.constant(0x15)
-    status: types.unsignedchar = 0
+    datatype: b_types.unsignedchar = binmap.constant(0x15)
+    status: b_types.unsignedchar = 0
 
 
 class TestConstValues:
@@ -378,24 +378,24 @@ class TestConstValues:
 
 
 class AllDatatypes(binmap.BinmapDataclass):
-    _pad: types.pad = binmap.padding(1)
-    char: types.char = b"\x00"
-    signedchar: types.signedchar = 0
-    unsignedchar: types.unsignedchar = 0
-    boolean: types.boolean = False
-    short: types.short = 0
-    unsignedshort: types.unsignedshort = 0
-    integer: types.integer = 0
-    unsignedint: types.unsignedinteger = 0
-    long: types.long = 0
-    unsignedlong: types.unsignedlong = 0
-    longlong: types.longlong = 0
-    unsignedlonglong: types.unsignedlonglong = 0
-    halffloat: types.halffloat = 0.0
-    floating: types.floating = 0.0
-    double: types.double = 0.0
-    string: types.string = binmap.stringfield(10)
-    pascalstring: types.pascalstring = binmap.stringfield(15)
+    _pad: b_types.pad = binmap.padding(1)
+    char: b_types.char = b"\x00"
+    signedchar: b_types.signedchar = 0
+    unsignedchar: b_types.unsignedchar = 0
+    boolean: b_types.boolean = False
+    short: b_types.short = 0
+    unsignedshort: b_types.unsignedshort = 0
+    integer: b_types.integer = 0
+    unsignedint: b_types.unsignedinteger = 0
+    long: b_types.long = 0
+    unsignedlong: b_types.unsignedlong = 0
+    longlong: b_types.longlong = 0
+    unsignedlonglong: b_types.unsignedlonglong = 0
+    halffloat: b_types.halffloat = 0.0
+    floating: b_types.floating = 0.0
+    double: b_types.double = 0.0
+    string: b_types.string = binmap.stringfield(10)
+    pascalstring: b_types.pascalstring = binmap.stringfield(15)
 
 
 class TestAllDatatypes:
@@ -475,7 +475,7 @@ class TestAllDatatypes:
 class TestInheritance:
     def test_simple_inheritance(self):
         class Child(Temp):
-            humidity: types.unsignedchar = 0
+            humidity: b_types.unsignedchar = 0
 
         ch = Child()
         ch.temp = 10
@@ -488,7 +488,7 @@ class TestInheritance:
 
     def test_simple_inheritance_binary(self):
         class Child(Temp):
-            humidity: types.unsignedchar = 0
+            humidity: b_types.unsignedchar = 0
 
         ch = Child(b"\x10\x30")
         assert ch.temp == 16
@@ -496,7 +496,7 @@ class TestInheritance:
 
     def test_const_inheritance(self):
         class Child(ConstValues):
-            humidity: types.unsignedchar = 0
+            humidity: b_types.unsignedchar = 0
 
         ch = Child()
         with pytest.raises(AttributeError) as excinfo:
@@ -512,7 +512,7 @@ class TestInheritance:
 
     def test_const_inheritance_binary(self):
         class Child(ConstValues):
-            humidity: types.unsignedchar = 0
+            humidity: b_types.unsignedchar = 0
 
         ch = Child(b"\x15\x05\x30")
         assert ch.datatype == 0x15
@@ -521,7 +521,7 @@ class TestInheritance:
 
     def test_enum_inheritanec(self):
         class Child(EnumClass):
-            humidity: types.unsignedchar = 0
+            humidity: b_types.unsignedchar = 0
 
         ch = Child()
         ch.temp = 10
@@ -535,7 +535,7 @@ class TestInheritance:
 
     def test_enum_inheritance_binary(self):
         class Child(EnumClass):
-            humidity: types.unsignedchar = 0
+            humidity: b_types.unsignedchar = 0
 
         ch = Child(b"\x12\x01\x25")
         assert ch.temp == 18
@@ -544,18 +544,18 @@ class TestInheritance:
 
 
 class AutoLength(binmap.BinmapDataclass):
-    length: types.unsignedchar = binmap.autolength()
-    temp: types.signedchar = 0
+    length: b_types.unsignedchar = binmap.autolength()
+    temp: b_types.signedchar = 0
 
 
 class AutoLengthOffset(binmap.BinmapDataclass):
-    length: types.unsignedchar = binmap.autolength(offset=-1)
-    temp: types.signedchar = 0
+    length: b_types.unsignedchar = binmap.autolength(offset=-1)
+    temp: b_types.signedchar = 0
 
 
 class AutoLengthOffsetPositive(binmap.BinmapDataclass):
-    length: types.unsignedchar = binmap.autolength(offset=1)
-    temp: types.signedchar = 0
+    length: b_types.unsignedchar = binmap.autolength(offset=1)
+    temp: b_types.signedchar = 0
 
 
 class TestAutolength:
@@ -577,7 +577,7 @@ class TestAutolength:
 
     def test_autolength_inheritance(self):
         class Child(AutoLength):
-            humidity: types.unsignedchar = 0
+            humidity: b_types.unsignedchar = 0
 
         alc = Child()
         alc.temp = 20
@@ -601,17 +601,17 @@ class TestAutolength:
 
 
 class CalculatedField(binmap.BinmapDataclass):
-    temp: types.signedchar = 0
-    hum: types.unsignedchar = 0
+    temp: b_types.signedchar = 0
+    hum: b_types.unsignedchar = 0
 
-    def chk(self) -> types.unsignedchar:
+    def chk(self) -> b_types.unsignedchar:
         return (self.temp + self.hum) & 0xFF
 
-    checksum: types.unsignedchar = binmap.calculatedfield(chk)
+    checksum: b_types.unsignedchar = binmap.calculatedfield(chk)
 
 
 class CalculatedFieldLast(binmap.BinmapDataclass):
-    temp: types.signedchar = 0
+    temp: b_types.signedchar = 0
 
     def chk_last(self):
         checksum = 0
@@ -621,8 +621,8 @@ class CalculatedFieldLast(binmap.BinmapDataclass):
             checksum += v
         return checksum & 0xFF
 
-    checksum: types.unsignedchar = binmap.calculatedfield(chk_last, last=True)
-    hum: types.unsignedchar = 0
+    checksum: b_types.unsignedchar = binmap.calculatedfield(chk_last, last=True)
+    hum: b_types.unsignedchar = 0
 
 
 class TestCalculatedField:
@@ -661,7 +661,7 @@ class TestCalculatedField:
 
     def test_calculated_field_last_inherit(self):
         class CalculatedFieldLastInherit(CalculatedFieldLast):
-            lux: types.unsignedinteger = 0
+            lux: b_types.unsignedinteger = 0
 
         cfli = CalculatedFieldLastInherit()
         cfli.temp = 10
@@ -677,13 +677,13 @@ class TestCalculatedField:
         with pytest.raises(ValueError) as excinfo:
 
             class CalculatedFieldMultiLast(binmap.BinmapDataclass):
-                temp: types.unsignedchar = 0
+                temp: b_types.unsignedchar = 0
 
                 def chk(self):
                     return 0
 
-                checksum1: types.unsignedchar = binmap.calculatedfield(chk, last=True)
-                checksum2: types.unsignedchar = binmap.calculatedfield(chk, last=True)
+                checksum1: b_types.unsignedchar = binmap.calculatedfield(chk, last=True)
+                checksum2: b_types.unsignedchar = binmap.calculatedfield(chk, last=True)
 
         assert "Can't have more than one last" in str(excinfo)
 
@@ -694,6 +694,8 @@ class TestCalculatedField:
                 def chk2(self):
                     return 0
 
-                checksum2: types.unsignedchar = binmap.calculatedfield(chk2, last=True)
+                checksum2: b_types.unsignedchar = binmap.calculatedfield(
+                    chk2, last=True
+                )
 
         assert "Can't have more than one last" in str(excinfo)

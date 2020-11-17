@@ -2,11 +2,9 @@ import dataclasses
 import struct
 from enum import IntEnum, IntFlag
 from functools import partial
-from typing import Callable, Dict, List, Tuple, Type, TypeVar, Union, get_type_hints
+from typing import Callable, Dict, List, Tuple, Type, Union, get_type_hints
 
-from binmap import types
-
-T = TypeVar("T")
+from binmap import types as b_types
 
 
 class BaseDescriptor:
@@ -56,7 +54,6 @@ class PaddingField(BaseDescriptor):
 
     def __set__(self, obj, value):
         """Setting values does nothing"""
-        pass
 
 
 class EnumField(BinField):
@@ -66,7 +63,7 @@ class EnumField(BinField):
 
     def __set__(self, obj, value):
         datafieldsmap = {f.name: f for f in dataclasses.fields(obj)}
-        if type(value) is str:
+        if isinstance(value, str):
             datafieldsmap[self.name].metadata["enum"][value]
         else:
             datafieldsmap[self.name].metadata["enum"](value)
@@ -82,8 +79,7 @@ class ConstField(BinField):
     def __set__(self, obj, value):
         if self.name in obj.__dict__:
             raise AttributeError(f"{self.name} is a constant")
-        else:
-            obj.__dict__[self.name] = value
+        obj.__dict__[self.name] = value
 
 
 class CalculatedField(BinField):
@@ -104,28 +100,28 @@ class CalculatedField(BinField):
 
 
 datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
-    types.char: (BinField, "c"),
-    types.signedchar: (BinField, "b"),
-    types.unsignedchar: (BinField, "B"),
-    types.boolean: (BinField, "?"),
+    b_types.char: (BinField, "c"),
+    b_types.signedchar: (BinField, "b"),
+    b_types.unsignedchar: (BinField, "B"),
+    b_types.boolean: (BinField, "?"),
     bool: (BinField, "?"),
-    types.short: (BinField, "h"),
-    types.unsignedshort: (BinField, "H"),
-    types.integer: (BinField, "i"),
+    b_types.short: (BinField, "h"),
+    b_types.unsignedshort: (BinField, "H"),
+    b_types.integer: (BinField, "i"),
     int: (BinField, "i"),
-    types.unsignedinteger: (BinField, "I"),
-    types.long: (BinField, "l"),
-    types.unsignedlong: (BinField, "L"),
-    types.longlong: (BinField, "q"),
-    types.unsignedlonglong: (BinField, "Q"),
-    types.halffloat: (BinField, "e"),
-    types.floating: (BinField, "f"),
+    b_types.unsignedinteger: (BinField, "I"),
+    b_types.long: (BinField, "l"),
+    b_types.unsignedlong: (BinField, "L"),
+    b_types.longlong: (BinField, "q"),
+    b_types.unsignedlonglong: (BinField, "Q"),
+    b_types.halffloat: (BinField, "e"),
+    b_types.floating: (BinField, "f"),
     float: (BinField, "f"),
-    types.double: (BinField, "d"),
-    types.string: (BinField, "s"),
+    b_types.double: (BinField, "d"),
+    b_types.string: (BinField, "s"),
     str: (BinField, "s"),
-    types.pascalstring: (BinField, "p"),
-    types.pad: (PaddingField, "x"),
+    b_types.pascalstring: (BinField, "p"),
+    b_types.pad: (PaddingField, "x"),
 }
 
 
@@ -136,7 +132,7 @@ def padding(length: int = 1) -> dataclasses.Field:
     :param int lenght: Number of bytes of padded field
     :return: dataclass field
     """
-    return dataclasses.field(default=length, repr=False, metadata={"padding": True})
+    return dataclasses.field(default=length, repr=False, metadata={"padding": True})  # type: ignore
 
 
 def constant(value: Union[int, float, str]) -> dataclasses.Field:
@@ -146,7 +142,7 @@ def constant(value: Union[int, float, str]) -> dataclasses.Field:
     :param value: Constant value for the field.
     :return: dataclass field
     """
-    return dataclasses.field(default=value, init=False, metadata={"constant": True})
+    return dataclasses.field(default=value, init=False, metadata={"constant": True})  # type: ignore
 
 
 def autolength(offset: int = 0) -> dataclasses.Field:
@@ -156,7 +152,7 @@ def autolength(offset: int = 0) -> dataclasses.Field:
     :param offset: offset for the lenght calculation
     :return: dataclass field
     """
-    return dataclasses.field(default=offset, init=False, metadata={"autolength": True})
+    return dataclasses.field(default=offset, init=False, metadata={"autolength": True})  # type: ignore
 
 
 def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
@@ -170,7 +166,7 @@ def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
     """
     if default == b"":
         default = b"\x00" * length
-    return dataclasses.field(default=default, metadata={"length": length})
+    return dataclasses.field(default=default, metadata={"length": length})  # type: ignore
 
 
 def enumfield(
@@ -183,7 +179,7 @@ def enumfield(
     :param IntEnum default: default value
     :return: dataclass field
     """
-    return dataclasses.field(default=default, metadata={"enum": enumclass})
+    return dataclasses.field(default=default, metadata={"enum": enumclass})  # type: ignore
 
 
 def calculatedfield(function: Callable, last=False) -> dataclasses.Field:
@@ -193,7 +189,7 @@ def calculatedfield(function: Callable, last=False) -> dataclasses.Field:
     :param Callable function: function that calculates the field.
     :return: dataclass field
     """
-    return dataclasses.field(default=0, metadata={"function": function, "last": last})
+    return dataclasses.field(default=0, metadata={"function": function, "last": last})  # type: ignore
 
 
 @dataclasses.dataclass
@@ -233,11 +229,11 @@ class BinmapDataclass:
             elif "autolength" in field_.metadata:
                 _base = ConstField
             elif "function" in field_.metadata:
-                _base = partial(CalculatedField, function=field_.metadata["function"])
+                _base = partial(CalculatedField, function=field_.metadata["function"])  # type: ignore
             setattr(cls, field_.name, _base(name=field_.name))
-            if type_hints[field_.name] is types.pad:
+            if type_hints[field_.name] is b_types.pad:
                 _type = field_.default * _type
-            if type_hints[field_.name] in (types.string, types.pascalstring, str):
+            if type_hints[field_.name] in (b_types.string, b_types.pascalstring, str):
                 _type = str(field_.metadata["length"]) + _type
             if "last" in field_.metadata and field_.metadata["last"]:
                 if lastfield != "":
