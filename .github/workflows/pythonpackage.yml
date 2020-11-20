@@ -28,7 +28,7 @@ jobs:
         flake8 binmap tests --count --exit-zero --max-complexity=10 --statistics
     - name: Check with mypy
       run: |
-        mypy binmap
+        mypy --strict binmap
 
     - name: Test with pytest
       run: |

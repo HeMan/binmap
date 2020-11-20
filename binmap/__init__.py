@@ -2,31 +2,45 @@ import dataclasses
 import struct
 from enum import IntEnum, IntFlag
 from functools import partial
-from typing import Callable, ClassVar, Dict, List, Tuple, Type, Union, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    Generic,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    get_type_hints,
+)
 
 from binmap import types as b_types
 
+T = TypeVar("T")
 
-class BaseDescriptor:
+
+class BaseDescriptor(Generic[T]):
     """Base class for all descriptors
 
     :param name: Variable name"""
 
-    def __set_name__(self, obj, name):
+    def __set_name__(self, obj: Any, name: str) -> None:
         self.name = name
 
-    def __init__(self, name=""):
+    def __init__(self, name: str = ""):
         self.name = name
 
 
-class BinField(BaseDescriptor):
+class BinField(BaseDescriptor[T]):
     """BinField descriptor tries to pack it into a struct before setting the
     value as a bounds checker"""
 
-    def __get__(self, obj, owner):
+    def __get__(self, obj: Any, owner: Any) -> Any:
         return obj.__dict__[self.name]
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: Any, value: Any) -> None:
         type_hints = get_type_hints(obj)
         if self.name in type_hints:
             struct.pack(datatypemapping[type_hints[self.name]][1], value)
@@ -43,25 +57,25 @@ class BinField(BaseDescriptor):
         obj.__dict__[self.name] = value
 
 
-class PaddingField(BaseDescriptor):
+class PaddingField(BaseDescriptor[T]):
     """PaddingField descriptor is used to "pad" data with values unused for real data
 
     :raises AttributeError: when trying to read, since it's only padding."""
 
-    def __get__(self, obj, owner):
+    def __get__(self, obj: Any, owner: Any) -> None:
         """Getting values fails"""
         raise AttributeError(f"Padding ({self.name}) is not readable")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: Any, value: Any) -> None:
         """Setting values does nothing"""
 
 
-class EnumField(BinField):
+class EnumField(BinField[T]):
     """EnumField descriptor uses "enum" to map to and from strings. Accepts
     both strings and values when setting. Only values that has a corresponding
     string is allowed."""
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: Any, value: Any) -> None:
         datafieldsmap = {f.name: f for f in dataclasses.fields(obj)}
         if isinstance(value, str):
             datafieldsmap[self.name].metadata["enum"][value]
@@ -70,31 +84,31 @@ class EnumField(BinField):
         obj.__dict__[self.name] = value
 
 
-class ConstField(BinField):
+class ConstField(BinField[T]):
     """ConstField descriptor keeps it's value
 
     :raises AttributeError: Since it's a constant it raises and error when
       trying to set"""
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: Any, value: Any) -> None:
         if self.name in obj.__dict__:
             raise AttributeError(f"{self.name} is a constant")
         obj.__dict__[self.name] = value
 
 
-class CalculatedField(BinField):
+class CalculatedField(BinField[T]):
     """CalculatedField calls a function when it's converted to bytes
 
     :raises AttributeError: Trying to set the value is not allowed"""
 
-    def __init__(self, name, function):
+    def __init__(self, name: str, function: Callable[[Any], Any]):
         self.name = name
         self.function = function
 
-    def __get__(self, obj, owner):
+    def __get__(self, obj: Any, owner: Any) -> Any:
         return self.function(obj)
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: Any, value: Any) -> None:
         if self.name in obj.__dict__:
             raise AttributeError("Can't set a calculated field")
 
@@ -182,7 +196,7 @@ def enumfield(
     return dataclasses.field(default=default, metadata={"enum": enumclass})  # type: ignore
 
 
-def calculatedfield(function: Callable, last=False) -> dataclasses.Field:
+def calculatedfield(function: Callable, last: bool=False) -> dataclasses.Field:
     """
     Field generator function for calculated fields
 
@@ -200,7 +214,7 @@ class BinmapDataclass:
 
     __binarydata: dataclasses.InitVar[bytes] = b""
     __datafields: ClassVar[List[str]]
-    __datafieldsmap: ClassVar[Dict]
+    __datafieldsmap: ClassVar[Dict[str, Any]]
     __formatstring: ClassVar[str]
 
     def __init_subclass__(cls, byteorder: str = ">"):
@@ -241,7 +255,7 @@ class BinmapDataclass:
                 cls.__formatstring += _type
         cls.__formatstring += lastfield
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         """
         Packs the class' fields to a binary string
         :return: Binary string packed.
@@ -269,7 +283,7 @@ class BinmapDataclass:
             *values,
         )
 
-    def __post_init__(self, _binarydata: bytes):
+    def __post_init__(self, _binarydata: bytes) -> None:
         """
         Initialises fields from a binary string
         :param bytes _binarydata: Binary string that will be unpacked.
@@ -297,7 +311,7 @@ class BinmapDataclass:
         if _binarydata != b"":
             self.frombytes(_binarydata)
 
-    def frombytes(self, value: bytes):
+    def frombytes(self, value: bytes) -> None:
         """
         Unpacks value to each field
         :param bytes value: binary string to unpack
