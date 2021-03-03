@@ -7,7 +7,7 @@ flake8-isort
 ipython
 jedi
 mypy
-pylint
+pylint>=2.5.0
 pytest
 tox
 twine
