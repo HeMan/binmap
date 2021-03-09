@@ -1,6 +1,6 @@
-from setuptools import find_packages, setup
-
 from os import path
+
+from setuptools import find_packages, setup
 
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, "README.rst")) as f:
