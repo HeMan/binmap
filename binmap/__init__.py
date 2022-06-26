@@ -230,7 +230,7 @@ class BinmapDataclass:
                 _base = partial(CalculatedField, function=field_.metadata["function"])  # type: ignore
             setattr(cls, field_.name, _base(name=field_.name))
             if type_hints[field_.name] is b_types.pad:
-                _type = field_.default * _type
+                _type = field_.default * _type  # type: ignore
             if type_hints[field_.name] in (b_types.string, b_types.pascalstring, str):
                 _type = str(field_.metadata["length"]) + _type
             if "last" in field_.metadata and field_.metadata["last"]:
@@ -285,7 +285,7 @@ class BinmapDataclass:
                 self.__dict__.update({f.name: f.default})
             if "autolength" in f.metadata:
                 self.__dict__.update(
-                    {f.name: struct.calcsize(self.__formatstring) + f.default}
+                    {f.name: struct.calcsize(self.__formatstring) + f.default}  # type: ignore
                 )
             if "function" in f.metadata:
                 self.__dict__.update({f.name: f.metadata["function"]})
