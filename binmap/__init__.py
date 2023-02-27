@@ -170,7 +170,7 @@ def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
 
 
 def enumfield(
-    enumclass: Union[IntEnum, IntFlag], default: Union[IntEnum, IntFlag, int] = None
+    enumclass: Union[IntEnum, IntFlag], default: Union[IntEnum, IntFlag, int, None] = None
 ) -> dataclasses.Field:
     """
     Field generator function for enum field
