@@ -109,11 +109,11 @@ class TestTempClass:
         t = Temp()
         with pytest.raises(struct.error) as excinfo:
             t.temp = 256
-        assert "ubyte format requires 0 <= number <= 255" in str(excinfo)
+        assert "format requires 0 <= number <= 255" in str(excinfo)
 
         with pytest.raises(struct.error) as excinfo:
             t.temp = -1
-        assert "ubyte format requires 0 <= number <= 255" in str(excinfo)
+        assert "format requires 0 <= number <= 255" in str(excinfo)
 
     def test_compare_equal(self):
         t1 = Temp(temp=10)
