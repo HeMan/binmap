@@ -20,6 +20,10 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Install setuptools
+      run: |
+        pip install setuptools
+
     - name: Build package
       run: |
         python setup.py sdist
