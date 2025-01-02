@@ -99,6 +99,10 @@ class CalculatedField(BinField):
             raise AttributeError("Can't set a calculated field")
 
 
+class DynlenField(BinField):
+    pass
+
+
 datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
     b_types.char: (BinField, "c"),
     b_types.signedchar: (BinField, "b"),
@@ -155,6 +159,15 @@ def autolength(offset: int = 0) -> dataclasses.Field:
     return dataclasses.field(default=offset, init=False, metadata={"autolength": True})  # type: ignore
 
 
+def dynlength(offset: int = 0) -> dataclasses.Field:
+    """
+    Field generator function for dynamic length strings
+    :param offset: offset for the lenght calculation
+    :return: dataclass field
+    """
+    return dataclasses.field(default=offset, init=False, metadata={"dynlength": True})  # type: ignore
+
+
 def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
     """
     Field generator function for string fields.
@@ -170,7 +183,8 @@ def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
 
 
 def enumfield(
-    enumclass: Union[IntEnum, IntFlag], default: Union[IntEnum, IntFlag, int, None] = None
+    enumclass: Union[IntEnum, IntFlag],
+    default: Union[IntEnum, IntFlag, int, None] = None,
 ) -> dataclasses.Field:
     """
     Field generator function for enum field
@@ -228,11 +242,14 @@ class BinmapDataclass:
                 _base = ConstField
             elif "function" in field_.metadata:
                 _base = partial(CalculatedField, function=field_.metadata["function"])  # type: ignore
+            elif "dynlength" in field_.metadata:
+                _base = DynlenField
             setattr(cls, field_.name, _base(name=field_.name))
             if type_hints[field_.name] is b_types.pad:
                 _type = field_.default * _type  # type: ignore
             if type_hints[field_.name] in (b_types.string, b_types.pascalstring, str):
-                _type = str(field_.metadata["length"]) + _type
+                if "dynlength" not in field_.metadata:
+                    _type = str(field_.metadata["length"]) + _type
             if "last" in field_.metadata and field_.metadata["last"]:
                 if lastfield != "":
                     raise ValueError("Can't have more than one last")

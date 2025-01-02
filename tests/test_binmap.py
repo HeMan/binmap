@@ -183,6 +183,10 @@ class StringWithDefault(binmap.BinmapDataclass):
     defaultstring: b_types.string = binmap.stringfield(10, default=b"hellohello")
 
 
+class PascalString(binmap.BinmapDataclass):
+    p_string: b_types.pascalstring = binmap.stringfield(10)
+
+
 class TestStrings:
     def test_strings(self):
         s = Strings()
@@ -200,6 +204,21 @@ class TestStrings:
         assert str(sd) == "StringWithDefault(defaultstring=b'hellohello')"
         sd1 = StringWithDefault(defaultstring=b"worldworld")
         assert sd1.defaultstring == b"worldworld"
+
+    def test_pack_pascalstring(self):
+        ps = PascalString(p_string=b"hello")
+        assert ps.p_string == b"hello"
+        assert bytes(ps) == b"\x05hello\x00\x00\x00\x00"
+
+
+class DynamicPascalString(binmap.BinmapDataclass):
+    dyn_pstring: b_types.pascalstring = binmap.dynlength()
+
+
+class TestDynamicPascalString:
+    def test_dynamic_pascalstring(self):
+        dps = DynamicPascalString(dyn_pstring=b"Hello")
+        assert bytes(dps) == b"\x05hello"
 
 
 class Pad(binmap.BinmapDataclass):
