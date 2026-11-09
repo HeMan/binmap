@@ -1,0 +1,244 @@
+# AGENTS.md
+
+Guidance for AI coding agents (and humans) working on **binmap**.
+
+## What this project is
+
+`binmap` is a small, pure-Python, **zero-dependency** library for declaring binary
+record layouts as dataclasses. Type hints choose the wire format, `bytes(obj)` packs,
+and `Cls(raw_bytes)` / `obj.frombytes(raw)` unpack. Under the hood it uses the stdlib
+`struct` module.
+
+```python
+from binmap import BinmapDataclass, b_types, calculatedfield
+
+class Reading(BinmapDataclass, byteorder="<"):   # default byteorder is ">" (big-endian)
+    temp: b_types.signedchar = 0
+    hum: b_types.unsignedchar = 0
+    def chk(self) -> b_types.unsignedchar:
+        return (self.temp + self.hum) & 0xFF
+    checksum: b_types.unsignedchar = calculatedfield(chk)
+
+bytes(Reading(temp=-20, hum=10))   # b'\xec\n\xf6'
+Reading(b"\xec\n\xf6").temp        # -20
+```
+
+It is published on PyPI as `binmap`, is marked *Production/Stable*, and its docs are on
+Read the Docs. **Keep the public API backwards compatible.** That covers the field
+factory functions, the type names, the `byteorder=` class keyword, exception types and
+messages, and `repr` output.
+
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| `binmap/__init__.py` | The entire implementation: descriptors, `datatypemapping`, field factories (`padding`, `constant`, `autolength`, `stringfield`, `enumfield`, `calculatedfield`), and `BinmapDataclass`. |
+| `binmap/types.py` | One `typing.NewType` per `struct` format character (`unsignedchar`, `short`, `double`, `pad`, ...). Re-exported as `binmap.b_types`. |
+| `binmap/st.py` | Single-letter aliases named after the `struct` format characters (`st.B`, `st.H`, `st.x`, ...). Not covered by tests. |
+| `tests/test_binmap.py` | The only test module. |
+| `docs/source/` | Sphinx docs. `index.rst` includes `README.rst`; `binmap.rst` autodocs the package. |
+| `setup.py` | setuptools packaging. There is no `pyproject.toml`. |
+| `requirements-dev.txt`, `requirements-doc.txt` | Dev and docs tools. Nothing is pinned, and there is no lockfile. |
+| `.python-version` | Pins the local dev environment to Python 3.13 for uv. |
+| `tox.ini` | Holds the flake8 and isort config as well as a tox env. |
+| `.bumpversion.cfg` | bump2version config. The version lives here and in `setup.py`. |
+| `.github/workflows/` | `pythonpackage.yml` (CI), `pythondist.yml` (publish to PyPI on tag). |
+
+## Setup and commands
+
+The dev environment is managed with [uv](https://docs.astral.sh/uv/), used as a
+venv/pip front end. There is no `uv sync` and no `uv.lock`. `uv venv` creates `.venv`
+with Python 3.13 from `.python-version`, and uv downloads that Python if it isn't
+installed. Tests import `binmap` from the repo root, so no editable install is needed.
+
+**Deactivate any other virtualenv first.** `uv pip` installs into an activated
+`VIRTUAL_ENV`, but `uv run` always uses `.venv`. With another virtualenv active, you
+would install into one environment and run from the other.
+
+```sh
+uv venv
+uv pip install -r requirements-dev.txt
+
+# Tests
+uv run pytest -v
+uv run pytest -v tests/test_binmap.py::TestAutolength         # one class
+uv run pytest -v -k calculated                                # by keyword
+uv run --isolated --python 3.9 --with pytest pytest -v        # another Python, without touching .venv
+
+# Type check (non-strict, package only)
+uv run mypy binmap
+
+# Lint: CI only *fails* on syntax errors / undefined names:
+uv run flake8 binmap tests --count --select=E9,F63,F7,F82 --show-source --statistics
+# Full lint with all plugins (black, isort, builtins) using tox.ini config:
+uv run flake8 binmap tests
+
+# Format
+uv run black binmap tests
+uv run isort binmap tests
+
+# Docs (output goes to docs/build/html)
+uv pip install -r requirements-doc.txt
+uv run make -C docs html
+```
+
+- Before calling a change done, run `uv run pytest -v` and `uv run mypy binmap`, and run
+  `black` and `isort` on the files you touched.
+- `uv run tox` runs flake8, mypy and pytest in a single env. It currently stops at its
+  strict flake8 step because of the existing lint findings listed under *Code style*.
+- **Packaging still uses `setup.py` and the requirements files.** Don't migrate to
+  `pyproject.toml`, `uv sync` or `uv.lock`, and don't add new setup.py-era config
+  (`setup.cfg`, `MANIFEST.in`), unless asked. Add dev or docs tools to the matching
+  requirements file.
+
+### Python versions
+
+- CI tests **3.9 through 3.13**. Code must stay 3.9-compatible. Use
+  `typing.Union`/`Optional`/`Dict`/`List` and don't write `X | Y` in annotations.
+  Annotations are evaluated at runtime through `get_type_hints`, so this matters. Don't
+  use `match` either.
+- **Python 3.14+ is currently broken**, which is why the dev environment is pinned to
+  3.13. 51 of 59 tests fail because `BinField.__set__` calls `get_type_hints(obj)` on an
+  *instance*, which 3.14 rejects (PEP 649/749). The failure surfaces as a `KeyError` from
+  `__get__`.
+  - The fix is to resolve hints on the class with `get_type_hints(type(obj))`, which also
+    walks the MRO for inherited fields.
+  - When the fix lands, add the new versions to the CI matrix and the `setup.py`
+    classifiers, and consider moving the `.python-version` pin.
+  - Make sure inherited fields stay bounds-checked: no existing test assigns an invalid
+    value to an inherited field.
+
+## How it works
+
+Read this before touching `binmap/__init__.py`.
+
+- **Subclassing is the decorator.** `BinmapDataclass.__init_subclass__` calls
+  `dataclasses.dataclass(cls)` on every subclass, so users never write `@dataclass`. The
+  byte order is passed as a class keyword (`byteorder="<"`) and becomes the first
+  character of the struct format string.
+- **Building the format string.** `__init_subclass__` walks `dataclasses.fields(cls)`.
+  For each field it looks up the type hint in `datatypemapping`
+  (`type -> (descriptor class, struct code)`), picks a descriptor based on the field's
+  metadata, installs that descriptor as a class attribute, and appends the struct code to
+  a per-class format string.
+  - **Declaration order is wire order**, and parent-class fields come first.
+  - The one exception is `calculatedfield(..., last=True)`, which is moved to the end.
+    Only one `last` field is allowed per class hierarchy.
+- **Field kinds come from metadata keys**, which the factory functions set:
+
+  | Factory | Metadata key | Descriptor |
+  |---|---|---|
+  | `padding` | `"padding"` | `PaddingField` |
+  | `constant` | `"constant"` | `ConstField` |
+  | `autolength` | `"autolength"` | `ConstField` |
+  | `calculatedfield` | `"function"`, `"last"` | `CalculatedField` |
+  | `enumfield` | `"enum"` | `EnumField` |
+  | `stringfield` | `"length"` | `BinField` |
+
+  A new field kind follows the same pattern. Write a factory that returns
+  `dataclasses.field(..., metadata={...})`, then handle it in `__init_subclass__`,
+  `__post_init__`, `__bytes__` and `frombytes`.
+- **Values live in the instance `__dict__`, and its order matters.** `__bytes__` packs
+  `self.__dict__` values in insertion order. `__post_init__` deliberately deletes and
+  re-inserts each key so that this order matches field order (the "kludgy hack" comment).
+  Anything that adds instance attributes, or changes when keys are inserted, can silently
+  corrupt the packed output.
+- **Calculated fields** store the function itself in `__dict__`. `__bytes__` calls any
+  callable value it finds, and the descriptor's `__get__` calls the function.
+- **Validation happens on assignment.** `BinField.__set__` does a trial `struct.pack`, so
+  out-of-range values raise `struct.error` as soon as they're assigned, including through
+  the constructor and `frombytes`.
+- **The raw-bytes argument** is the `InitVar` `__binarydata`, name-mangled to
+  `_BinmapDataclass__binarydata`. It is the first positional parameter, which is why
+  `Cls(b"...")` parses data. Code that iterates fields skips names that start with
+  `_BinmapDataclass__`.
+- **`frombytes` checks data against the class.** Constant, autolength and calculated
+  fields are compared with what the class expects, and a mismatch raises `ValueError`
+  ("Constant doesn't match binary data", "Length doesn't match", "Wrong calculated value").
+- **Strings are `bytes`.** `string` and `pascalstring` values are `bytes` even though
+  their `NewType` base is `str`. The length comes from `stringfield(length)`.
+- **Padding.** The field's default is its byte count. Reading it raises `AttributeError`,
+  writing it is a no-op, and it's `repr=False`.
+
+### Adding a new datatype
+
+1. Add a `NewType` in `binmap/types.py`.
+2. Add a `(descriptor, struct_code)` entry to `datatypemapping` in `binmap/__init__.py`.
+3. Add the single-letter alias in `binmap/st.py`.
+4. Add a field to `AllDatatypes` in the tests, then update the expected bytes and the
+   expected `str()`.
+
+## Tests
+
+- Use pytest with plain `assert`. The sample classes are defined at module level, or
+  inside the test for inheritance cases, and grouped into `Test*` classes per feature.
+- Tests check exact packed bytes, exact `str()` output, `dataclasses.asdict` and `astuple`
+  results, and **substrings of exception messages**. So exception types and messages count
+  as behaviour. If you change one, update the tests and treat it as an API change.
+- For every behaviour change, test both directions: packing with `bytes(obj)` and parsing
+  with `Cls(b"...")`. Add an inheritance case when the change touches field collection,
+  ordering or type lookup. Include negative cases (invalid values must still raise),
+  because the existing suite mostly checks valid input.
+- **README examples are not executed** (there is no doctest) and have drifted. For
+  example, the `TempHum` example sets `th.humidity`, but the field is called `hum`. Treat
+  the tests as the spec. If you edit README examples, check them by hand, because the
+  README is also the PyPI long description and the docs landing page.
+
+## Code style
+
+- Formatting: **black** (default 88 columns) and **isort** (black-compatible settings in
+  `tox.ini`). flake8 runs with `max-line-length = 160` and the `flake8-black`,
+  `flake8-isort` and `flake8-builtins` plugins.
+- Format the files you change, but don't reformat unrelated code in a feature change.
+- Some lint findings are already present. Don't "fix" them as a drive-by:
+  - black wants to rewrap the `enumfield` signature.
+  - flake8 `A005`: `binmap/types.py` shadows the stdlib `types` module. The module name is
+    public API, so don't rename it.
+  - flake8 `E721` in `tests/test_binmap.py`.
+- Docstrings use reST/Sphinx field lists (`:param x:`, `:return:`, `:raises X:`), because
+  autodoc renders them into the published docs.
+- mypy runs non-strict. The existing `# type: ignore` comments on `dataclasses.field(...)`
+  returns are intentional.
+- **No runtime dependencies.** Keep the package stdlib-only.
+
+## Known issues
+
+These are current bugs or debt, not intended behaviour. Apart from the 3.14 fix, which is
+welcome, fix them only when asked.
+
+- Python 3.14+ incompatibility (see *Python versions* above).
+- `dataclasses.asdict()` and `astuple()` raise `AttributeError` on classes with padding
+  fields, because `PaddingField.__get__` raises. See the `TODO` in
+  `TestPadClass.test_create_pad`.
+- `__datafields` is a class-level list, but `__post_init__` appends to it on every
+  instantiation, so it grows without bound. `frombytes` only works because `zip()`
+  truncates.
+- `.readthedocs.yml` uses the deprecated `python.version: 3.7` form, and Read the Docs
+  now requires a `build:` section.
+- `setup.py` still lists the Python 3.8 classifier although CI dropped 3.8, and it sets no
+  `python_requires`. Because `find_packages()` also picks up `tests/`, a top-level `tests`
+  package gets installed.
+- `make -C docs html` writes to `docs/build/`, but `.gitignore` only ignores
+  `docs/_build/`. Don't commit build output.
+- `docs/source/conf.py` points `html_static_path` at a `_static` directory that doesn't
+  exist, so every docs build prints a warning.
+
+## Git, CI and releases
+
+- The default branch is `master`. Work on a branch and open a PR against `master`. History
+  uses squash merges (`Subject (#NN)`).
+- CI (`pythonpackage.yml`) runs on every push and PR, once for each Python in the matrix.
+  It sets up uv and the matrix Python with `astral-sh/setup-uv`
+  (`activate-environment: true`), runs `uv pip install -r requirements-dev.txt`, then the
+  flake8 hard-fail subset, `mypy binmap` and `python -m pytest -v`. The matrix version
+  overrides `.python-version`.
+- Dependabot opens weekly PRs that bump GitHub Actions versions.
+- **Releases are maintainer-only.** Agents must not bump versions, create tags or push
+  tags.
+  - The version lives in `setup.py` and `.bumpversion.cfg`. There is no `__version__`.
+  - `uv run bump2version patch|minor|major` updates both files, commits
+    `Bump version: X → Y` and tags `vX.Y.Z`. It works on the pinned 3.13, but
+    bump2version is unmaintained and does not run on Python 3.15+.
+  - **Pushing any tag** triggers `pythondist.yml`, which builds an sdist only
+    (`python setup.py sdist`, with setup-python rather than uv) and uploads it to PyPI
+    using the `pypi` repo secret.
