@@ -35,14 +35,17 @@ messages, and `repr` output.
 | `binmap/__init__.py` | The entire implementation: descriptors, `datatypemapping`, field factories (`padding`, `constant`, `autolength`, `stringfield`, `enumfield`, `calculatedfield`), and `BinmapDataclass`. |
 | `binmap/types.py` | One `typing.NewType` per `struct` format character (`unsignedchar`, `short`, `double`, `pad`, ...). Re-exported as `binmap.b_types`. |
 | `binmap/st.py` | Single-letter aliases named after the `struct` format characters (`st.B`, `st.H`, `st.x`, ...). Not covered by tests. |
-| `tests/test_binmap.py` | The only test module. |
-| `docs/source/` | Sphinx docs. `index.rst` includes `README.rst`; `binmap.rst` autodocs the package. |
+| `tests/test_binmap.py` | Tests for the library. |
+| `tests/test_readme.py` | Runs every `>>>` example in `README.rst` as a doctest. |
+| `docs/source/` | Sphinx docs. `index.rst` includes `README.rst`; `binmap.rst` autodocs the package. `conf.py` reads the version from `setup.py`. |
+| `.readthedocs.yml` | Read the Docs build: the main docs site for `master` (latest) and release tags (stable). |
 | `setup.py` | setuptools packaging. There is no `pyproject.toml`. |
 | `requirements-dev.txt`, `requirements-doc.txt` | Dev and docs tools. Nothing is pinned, and there is no lockfile. |
 | `.python-version` | Pins the local dev environment to Python 3.14 for uv. It's not 3.15 because bump2version doesn't run there. |
 | `tox.ini` | Holds the flake8 and isort config as well as a tox env. |
 | `.bumpversion.cfg` | bump2version config. The version lives here and in `setup.py`. |
-| `.github/workflows/` | `pythonpackage.yml` (CI), `pythondist.yml` (publish to PyPI on tag). |
+| `.github/workflows/` | `pythonpackage.yml` (CI), `pythondist.yml` (publish to PyPI on tag), `docs.yml` (build docs and publish each branch to GitHub Pages). |
+| `.github/scripts/gh-pages.sh` | Publishes or removes one branch's docs on the `gh-pages` branch and regenerates its index page. Used by `docs.yml`. |
 
 ## Setup and commands
 
@@ -87,9 +90,10 @@ uv run flake8 binmap tests
 uv run black binmap tests
 uv run isort binmap tests
 
-# Docs (output goes to docs/build/html)
+# Docs (output goes to docs/build/html). Warnings are errors, as in CI and on
+# Read the Docs.
 uv pip install -r requirements-doc.txt
-uv run make -C docs html
+uv run make -C docs html SPHINXOPTS="-W --keep-going"
 ```
 
 - Before calling a change done, run `uv run pytest -v` and `uv run mypy binmap`, and run
@@ -240,11 +244,13 @@ Read this before touching `binmap/__init__.py`.
 - Error messages from `struct` differ between Python versions (for example, 3.10 and
   older spelled out the `ushort` bound differently). Assert only substrings that are
   stable across the CI matrix, such as `"format requires 0 <= number <="`.
-- **README examples are not executed** (there is no doctest) and have drifted. For
-  example, the Enums example expects `print(w.direction)` to show `<WindEnum.West: 3>`,
-  but Python 3.11+ prints `3`. Treat the tests as the spec. If you edit README examples,
-  check them by hand, because the README is also the PyPI long description and the docs
-  landing page.
+- **README examples are tests.** `tests/test_readme.py` runs every `>>>` example in
+  `README.rst` with doctest, so an example's output must match exactly.
+  - Exceptions need the doctest form: a `Traceback (most recent call last):` line, a
+    `...` line, then the exception line.
+  - The examples leave out imports. The test supplies binmap's public names, the type
+    names, `IntEnum`, `asdict` and `astuple`; add others there if an example needs them.
+  - The README is also the PyPI long description and the docs landing page.
 
 ## Code style
 
@@ -275,14 +281,11 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   `asdict()` and `astuple()` leave it out. So zipping `fields(SomeClass)` with
   `astuple(obj)` silently misaligns the values, and code that walks the class's fields and
   reads each one from an instance still raises.
-- `.readthedocs.yml` uses the deprecated `python.version: 3.7` form, and Read the Docs
-  now requires a `build:` section.
 - `find_packages()` in `setup.py` also picks up `tests/`, so a top-level `tests` package
   gets installed.
-- `make -C docs html` writes to `docs/build/`, but `.gitignore` only ignores
-  `docs/_build/`. Don't commit build output.
-- `docs/source/conf.py` points `html_static_path` at a `_static` directory that doesn't
-  exist, so every docs build prints a warning.
+- `string` and `pascalstring` fields accept values longer than the field. Validation
+  packs with a bare `s`, which is one byte, so `bytes()` silently cuts the value to fit
+  while the attribute keeps the full value.
 
 ## Git, CI and releases
 
@@ -293,6 +296,15 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   (`activate-environment: true`), runs `uv pip install -r requirements-dev.txt`, then the
   flake8 hard-fail subset, `mypy binmap` and `python -m pytest -v`. The matrix version
   overrides `.python-version`.
+- **Documentation** is published in two places:
+  - **Read the Docs** (`.readthedocs.yml`) is the main site, for `master` (latest) and
+    release tags (stable): https://binmap.readthedocs.io/.
+  - **GitHub Pages:** `docs.yml` builds the docs with `sphinx-build -W` on every push to
+    any branch except `dependabot/*` and `gh-pages`. It publishes them to
+    https://heman.github.io/binmap/<branch>/, using `.github/scripts/gh-pages.sh` to
+    update the `gh-pages` branch, and removes a branch's folder when the branch is
+    deleted. Branch builds show the branch name next to the version (`DOCS_BRANCH`).
+  - Never edit `gh-pages` by hand; the workflow regenerates its index page.
 - Dependabot opens weekly PRs that bump GitHub Actions versions.
 - **Releases are maintainer-only.** Agents must not bump versions, create tags or push
   tags.

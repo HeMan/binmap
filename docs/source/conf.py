@@ -11,11 +11,13 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import re
 import sys
 
 import sphinx_rtd_theme
 
-sys.path.insert(0, os.path.abspath("../.."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, ROOT)
 
 
 # -- Project information -----------------------------------------------------
@@ -23,6 +25,15 @@ sys.path.insert(0, os.path.abspath("../.."))
 project = "Binmap"
 copyright = "2020, Jimmy Hedman"
 author = "Jimmy Hedman"
+
+# The package version, from setup.py, where bump2version keeps it.
+with open(os.path.join(ROOT, "setup.py"), encoding="utf-8") as setup_py:
+    release = re.search(r'version="([^"]+)"', setup_py.read()).group(1)
+version = release
+# The GitHub Pages workflow (.github/workflows/docs.yml) builds every branch
+# and sets DOCS_BRANCH, so those pages say which branch they document.
+if os.environ.get("DOCS_BRANCH"):
+    version = release = f"{release} ({os.environ['DOCS_BRANCH']} branch)"
 
 
 # -- General configuration ---------------------------------------------------
@@ -51,8 +62,3 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
