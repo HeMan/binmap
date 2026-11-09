@@ -3,6 +3,7 @@ import pickle
 import struct
 from dataclasses import asdict, astuple, fields, replace
 from enum import IntEnum, IntFlag
+from typing import Annotated, get_args
 
 import pytest
 
@@ -303,8 +304,19 @@ class TestStrings:
         assert sd1.defaultstring == b"worldworld"
 
     def test_string_types_are_bytes(self):
-        assert b_types.string.__supertype__ is bytes
-        assert b_types.pascalstring.__supertype__ is bytes
+        assert get_args(b_types.string)[0] is bytes
+        assert get_args(b_types.pascalstring)[0] is bytes
+
+    def test_bytes_annotation(self):
+        class PlainBytes(binmap.BinmapDataclass):
+            name: bytes = binmap.stringfield(4)
+
+        pb = PlainBytes(name=b"ab")
+        assert bytes(pb) == b"ab\x00\x00"
+        assert PlainBytes(b"wxyz").name == b"wxyz"
+        with pytest.raises(struct.error) as excinfo:
+            pb.name = b"abcde"
+        assert "name holds at most 4 bytes, got 5" in str(excinfo)
 
     def test_string_shorter_is_padded(self):
         s = Strings(identity=b"abc")
@@ -1227,6 +1239,48 @@ class TestInvalidClassDefinition:
                 value: Undefined = 0  # noqa: F821
 
         assert "name 'Undefined' is not defined" in str(excinfo)
+
+
+class TestTypeAliases:
+    def test_types_are_annotated_python_types(self):
+        # Type checkers see the plain Python type; binmap reads the StructCode
+        assert get_args(b_types.unsignedchar) == (int, b_types.StructCode("B"))
+        assert get_args(b_types.char) == (bytes, b_types.StructCode("c"))
+        assert get_args(b_types.double) == (float, b_types.StructCode("d"))
+        assert get_args(b_types.boolean) == (bool, b_types.StructCode("?"))
+
+    def test_own_alias(self):
+        rgb565 = Annotated[int, b_types.StructCode("H")]
+
+        class Pixel(binmap.BinmapDataclass):
+            colour: rgb565 = 0
+
+        assert bytes(Pixel(colour=0xF800)) == b"\xf8\x00"
+        with pytest.raises(struct.error):
+            Pixel(colour=0x10000)
+
+    def test_alias_with_more_metadata(self):
+        class Documented(binmap.BinmapDataclass):
+            temp: Annotated[b_types.unsignedchar, "degrees"] = 0
+
+        assert bytes(Documented(temp=200)) == b"\xc8"
+        with pytest.raises(struct.error):
+            Documented(temp=256)
+
+    def test_annotated_without_structcode_uses_the_python_type(self):
+        class Plain(binmap.BinmapDataclass):
+            value: Annotated[int, "no struct code"] = 0
+
+        assert bytes(Plain(value=1)) == b"\x00\x00\x00\x01"  # "i", like int
+
+    def test_st_aliases(self):
+        from binmap import st
+
+        class Short(binmap.BinmapDataclass):
+            a: st.B = 0
+            b: st.h = 0
+
+        assert bytes(Short(a=1, b=-2)) == b"\x01\xff\xfe"
 
 
 class TestClassBookkeeping:

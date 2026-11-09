@@ -33,7 +33,7 @@ jobs:
     # there too. Pinned so a pyright release can't break CI unannounced.
     - name: Check with pyright
       run: |
-        uvx pyright@1.1.414 tests/typecheck
+        uvx pyright@1.1.414 binmap tests/typecheck
 
     - name: Test with pytest
       run: |

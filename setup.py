@@ -16,6 +16,7 @@ setup(
     long_description_content_type="text/x-rst",
     url="https://github.com/HeMan/binmap",
     packages=find_packages(include=["binmap", "binmap.*"]),
+    package_data={"binmap": ["py.typed"]},
     python_requires=">=3.11",
     classifiers=[
         "Development Status :: 5 - Production/Stable",

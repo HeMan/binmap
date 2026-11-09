@@ -56,6 +56,30 @@ Datatypes
 Binmap supports all datatypes that standard library `struct <https://docs.python.org/3/library/struct.html>`_ has.
 The types works as typehints in the dataclass. When giving an attribute a
 typehinted datatype it will be added to the binary output from the class.
+Plain `int`, `float` and `bool` work too (packed like `integer`, `floating` and
+`boolean`), as does `bytes` with a `stringfield`.
+
+
+Type checking and editors
+-------------------------
+Binmap ships type information (`py.typed`), and type checkers and editors see binmap
+classes as dataclasses: they know each class's constructor and show fields as plain
+Python types (`int`, `float`, `bool` or `bytes`). CI checks this with mypy and with
+pyright, the engine behind VS Code's Pylance.
+
+The types in `binmap.types` are `Annotated` aliases that carry the struct format
+character in a `StructCode`, so you can define your own:
+
+.. code-block:: python
+
+   >>> from typing import Annotated
+   >>> from binmap.types import StructCode
+   >>> rgb565 = Annotated[int, StructCode("H")]
+   >>> class Pixel(BinmapDataclass):
+   ...     colour: rgb565 = 0
+   ...
+   >>> print(bytes(Pixel(colour=0xF800)))
+   b'\xf8\x00'
 
 
 Strings

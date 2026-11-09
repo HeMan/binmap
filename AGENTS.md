@@ -32,12 +32,14 @@ messages, and `repr` output.
 
 | Path | Purpose |
 |---|---|
-| `binmap/__init__.py` | The entire implementation: descriptors, `datatypemapping`, field factories (`padding`, `constant`, `autolength`, `stringfield`, `enumfield`, `calculatedfield`), and `BinmapDataclass`. |
-| `binmap/types.py` | One `typing.NewType` per `struct` format character (`unsignedchar`, `short`, `double`, `pad`, ...). Re-exported as `binmap.b_types`. |
-| `binmap/st.py` | Single-letter aliases named after the `struct` format characters (`st.B`, `st.H`, `st.x`, ...). Not covered by tests. |
+| `binmap/__init__.py` | The entire implementation: descriptors, `_struct_code()`, field factories (`padding`, `constant`, `autolength`, `stringfield`, `enumfield`, `calculatedfield`), and `BinmapDataclass`. `__all__` lists the public API. |
+| `binmap/types.py` | One `Annotated[<Python type>, StructCode(<code>)]` alias per `struct` format character (`unsignedchar`, `short`, `double`, `pad`, ...), plus `StructCode`. Re-exported as `binmap.b_types`. |
+| `binmap/st.py` | Single-letter aliases named after the `struct` format characters (`st.B`, `st.H`, `st.x`, ...). |
+| `binmap/py.typed` | PEP 561 marker: tells type checkers to use binmap's annotations. Shipped via `package_data` in `setup.py`. |
 | `tests/test_binmap.py` | Tests for the library. |
 | `tests/test_readme.py` | Runs every `>>>` example in `README.rst` as a doctest. |
-| `tests/test_packaging.py` | Checks that `setup.py` packages only `binmap` (and its subpackages). Skipped without setuptools. |
+| `tests/test_packaging.py` | Checks that `setup.py` packages only `binmap` (and its subpackages) and ships `py.typed`. Skipped without setuptools. |
+| `tests/typecheck/check_usage.py` | Everyday user code that mypy and pyright must accept without errors (CI checks it). `tests/test_typecheck.py` runs it, so it must also work at runtime. |
 | `docs/source/` | Sphinx docs. `index.rst` includes `README.rst`; `binmap.rst` autodocs the package. `conf.py` reads the version from `setup.py`. |
 | `.readthedocs.yml` | Read the Docs build: the main docs site for `master` (latest) and release tags (stable). |
 | `setup.py` | setuptools packaging. There is no `pyproject.toml`. `find_packages(include=["binmap", "binmap.*"])` keeps `tests/` out of the installed packages. |
@@ -79,8 +81,10 @@ uv run pytest -v tests/test_binmap.py::TestAutolength         # one class
 uv run pytest -v -k calculated                                # by keyword
 uv run --isolated --python 3.11 --with pytest pytest -v       # another Python, without touching .venv
 
-# Type check (non-strict, package only)
-uv run mypy binmap
+# Type check the package and the user-code sample, as CI does. pyright is the
+# engine behind VS Code's Pylance; keep its version in sync with the workflow.
+uv run mypy binmap tests/typecheck
+uvx pyright@1.1.414 binmap tests/typecheck
 
 # Lint: CI only *fails* on syntax errors / undefined names:
 uv run flake8 binmap tests --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -97,7 +101,7 @@ uv pip install -r requirements-doc.txt
 uv run make -C docs html SPHINXOPTS="-W --keep-going"
 ```
 
-- Before calling a change done, run `uv run pytest -v` and `uv run mypy binmap`, and run
+- Before calling a change done, run `uv run pytest -v` and both type checkers, and run
   `black` and `isort` on the files you touched.
 - `uv run tox` runs flake8, mypy and pytest in a single env. It currently stops at its
   strict flake8 step because of the existing lint findings listed under *Code style*.
@@ -116,10 +120,10 @@ uv run make -C docs html SPHINXOPTS="-W --keep-going"
   - Add new releases to the matrix and the classifiers.
 - **Resolve type hints on the class, never on an instance.** Python 3.14+ (PEP 649/749)
   rejects `get_type_hints(instance)`, which is what used to break 3.14.
-  - `__init_subclass__` resolves `get_type_hints(cls)` once and stores the result on the
-    class.
+  - `__init_subclass__` resolves `get_type_hints(cls, include_extras=True)` once and
+    stores each field's struct code on the class (`__codes`).
   - `BinField.__set__` reads it from there, so validation and the struct format always use
-    the same type. Reading it is also fast; resolving hints on every assignment made
+    the same code. Reading it is also fast; resolving hints on every assignment made
     assignments about 50x slower.
   - The bounds tests in `TestInheritance` guard this. A change that silently skips
     validation for inherited fields would otherwise pass every other test.
@@ -133,10 +137,15 @@ Read this before touching `binmap/__init__.py`.
   byte order is passed as a class keyword (`byteorder="<"`) and becomes the first
   character of the struct format string.
 - **Building the format string.** `__init_subclass__` walks `dataclasses.fields(cls)`.
-  For each field it looks up the type hint in `datatypemapping`
-  (`type -> (descriptor class, struct code)`), picks a descriptor based on the field's
-  metadata, installs that descriptor as a class attribute, and appends the struct code to
-  a per-class format string.
+  For each field it finds the struct code with `_struct_code()`, picks a descriptor based
+  on the code and the field's metadata, installs that descriptor as a class attribute,
+  and appends the code to a per-class format string.
+  - `_struct_code()` takes the code from the `StructCode` in an `Annotated` hint (the
+    `binmap.types` aliases, or users' own). Otherwise it maps plain `int`, `float`,
+    `bool`, `bytes` and `str` (`_PLAIN_CODES`); an `Annotated` hint without a
+    `StructCode` counts as its Python type. Anything else raises `KeyError`.
+  - That's why `get_type_hints()` is always called with `include_extras=True`: without
+    it, `Annotated` metadata is dropped and every alias looks like a plain `int`.
   - **Declaration order is wire order**, and parent-class fields come first.
   - With multiple inheritance, dataclasses collect fields in reverse MRO order. So
     `class C(A, B)` puts B's fields first, then A's, then C's. A field declared in several
@@ -184,8 +193,8 @@ Read this before touching `binmap/__init__.py`.
     ever add field names. So do `copy` and `pickle`.
 - **Calculated fields** store the function itself in `__dict__`. `__bytes__` calls any
   callable value it finds, and the descriptor's `__get__` calls the function.
-- **Validation happens on assignment.** `BinField.__set__` looks up the field's type in the
-  class's stored type hints and does a trial `struct.pack`. So out-of-range values raise
+- **Validation happens on assignment.** `BinField.__set__` looks up the field's struct
+  code stored on the class and does a trial `struct.pack`. So out-of-range values raise
   `struct.error` as soon as they're assigned, including through the constructor and
   `frombytes`.
   - The trial pack uses the class's byte-order prefix (stored by `__init_subclass__`)
@@ -207,8 +216,8 @@ Read this before touching `binmap/__init__.py`.
     function may read fields that come later in the struct.
   - It's all-or-nothing: on any error, including an invalid enum value, the instance's
     `__dict__` is restored and the exception re-raised. Keep it that way.
-- **Strings are `bytes`.** `string` and `pascalstring` (`NewType`s of `bytes`) and plain
-  `str` annotations (`STRING_TYPES`) take their size from `stringfield(length)`.
+- **Strings are `bytes`.** `string` and `pascalstring` (aliases of `bytes`) and plain
+  `bytes`/`str` annotations (codes `s` and `p`) take their size from `stringfield(length)`.
   - They use `StringField`, which rejects values longer than the field holds with
     `struct.error`; `struct` itself would cut them silently. A `string` holds `length`
     bytes, a `pascalstring` `length - 1`, never more than 255.
@@ -232,11 +241,37 @@ Read this before touching `binmap/__init__.py`.
 
 ### Adding a new datatype
 
-1. Add a `NewType` in `binmap/types.py`.
-2. Add a `(descriptor, struct_code)` entry to `datatypemapping` in `binmap/__init__.py`.
-3. Add the single-letter alias in `binmap/st.py`.
-4. Add a field to `AllDatatypes` in the tests, then update the expected bytes and the
-   expected `str()`.
+1. Add an alias in `binmap/types.py`:
+   `name: TypeAlias = Annotated[<Python type>, StructCode("<code>")]`. Use the Python
+   type that `struct` packs and unpacks for that code, since that's what type checkers
+   will show.
+2. Add the single-letter alias in `binmap/st.py`.
+3. Add a field to `AllDatatypes` in the tests, then update the expected bytes and the
+   expected `str()`. For an integer type, add it to `INTEGER_TYPES` as well.
+
+### Types for type checkers and editors
+
+Users' editors (VS Code's Pylance is pyright; PyCharm; mypy) only see the static types,
+not what `__init_subclass__` does at runtime. Keep these in place:
+
+- **`@dataclass_transform`** on `BinmapDataclass` tells type checkers that subclasses
+  are dataclasses, so they know each constructor.
+- **The type aliases are `Annotated`**, so type checkers see `int`, `float`, `bool` or
+  `bytes`, and `temp: unsignedchar = 0` type-checks. Don't go back to `NewType`, which
+  rejects plain values.
+- **The field factories return `Any`**, so a call reads as the field's default.
+  - `constant()` and `autolength()` are also the transform's field specifiers. Their
+    `init: Literal[False]` parameter tells type checkers they aren't `__init__`
+    arguments, matching runtime.
+  - Keep the factories' return types and the `init` parameters when you change them.
+- **`py.typed` and `__all__`.** Add new public names to `__all__`: with `py.typed`,
+  pyright treats a name that's only imported into the module (like `b_types`) as
+  private, and Sphinx autodoc documents only what `__all__` lists.
+- **`tests/typecheck/check_usage.py` must stay error-free in both checkers.** Extend it
+  when you add public API.
+  - Its `assert_type()` calls pin what editors show.
+  - The lines in `_not_allowed()` must stay errors. The file enables unused-ignore
+    warnings, so an ignore that's no longer needed fails the check.
 
 ## Tests
 
@@ -272,14 +307,15 @@ Read this before touching `binmap/__init__.py`.
   `flake8-isort` and `flake8-builtins` plugins.
 - Format the files you change, but don't reformat unrelated code in a feature change.
 - Some lint findings are already present. Don't "fix" them as a drive-by:
-  - black wants to rewrap the `enumfield` signature.
   - flake8 `A005`: `binmap/types.py` shadows the stdlib `types` module. The module name is
     public API, so don't rename it.
   - flake8 `E721` in `tests/test_binmap.py`.
 - Docstrings use reST/Sphinx field lists (`:param x:`, `:return:`, `:raises X:`), because
   autodoc renders them into the published docs.
-- mypy runs non-strict. The existing `# type: ignore` comments on `dataclasses.field(...)`
-  returns are intentional.
+- mypy (non-strict) and pyright (its default "standard" mode) both run on `binmap` and
+  `tests/typecheck`. The one `pyright: ignore` in `binmap/__init__.py`, on the
+  name-mangled `__binarydata`, is intentional: the mangling keeps it from clashing with
+  subclass fields and makes it positional-only for type checkers.
 - **No runtime dependencies.** Keep the package stdlib-only.
 
 ## Known issues

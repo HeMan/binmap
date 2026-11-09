@@ -17,3 +17,6 @@ def test_only_binmap_is_packaged(monkeypatch):
     runpy.run_path(str(ROOT / "setup.py"), run_name="__main__")
 
     assert sorted(arguments["packages"]) == ["binmap"]
+    # py.typed (PEP 561) tells type checkers to use binmap's annotations
+    assert arguments["package_data"] == {"binmap": ["py.typed"]}
+    assert (ROOT / "binmap" / "py.typed").is_file()
