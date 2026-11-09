@@ -50,12 +50,20 @@ The dev environment is managed with [uv](https://docs.astral.sh/uv/), used as a
 venv/pip front end. There is no `uv sync` and no `uv.lock`. `uv venv` creates `.venv`
 with Python 3.14 from `.python-version`, and uv downloads that Python if it isn't
 installed. Tests import `binmap` from the repo root, so no editable install is needed.
-When the pin changes, an existing `.venv` stays on the old Python. Recreate it with
-`uv venv --clear` and reinstall the requirements.
+When the pin changes, an existing `.venv` stays on the old Python. `uv run` then *skips*
+it and silently runs the newly pinned interpreter from elsewhere, without the dev tools
+(e.g. `Failed to spawn: black`). Recreate it with `uv venv --clear` and reinstall the
+requirements.
 
-**Deactivate any other virtualenv first.** `uv pip` installs into an activated
-`VIRTUAL_ENV`, but `uv run` always uses `.venv`. With another virtualenv active, you
-would install into one environment and run from the other.
+**Deactivate any other virtualenv first.** Outside a uv project, `uv run` picks the first
+interpreter that matches `.python-version`:
+1. an activated `VIRTUAL_ENV`,
+2. then `.venv`,
+3. then any other Python of the pinned version.
+
+`uv pip` always installs into the activated `VIRTUAL_ENV`. So an activated virtualenv can
+silently replace `.venv`, or, when its Python doesn't match the pin, you install into one
+environment and run from another.
 
 ```sh
 uv venv
@@ -168,8 +176,18 @@ Read this before touching `binmap/__init__.py`.
   ("Constant doesn't match binary data", "Length doesn't match", "Wrong calculated value").
 - **Strings are `bytes`.** `string` and `pascalstring` values are `bytes` even though
   their `NewType` base is `str`. The length comes from `stringfield(length)`.
-- **Padding.** The field's default is its byte count. Reading it raises `AttributeError`,
-  writing it is a no-op, and it's `repr=False`.
+- **Padding.** The field's default is its byte count. Reading it raises `AttributeError`
+  and writing it is a no-op.
+  - It's `repr=False` and `compare=False`, so the generated `__repr__` and `__eq__` never
+    read it. Two instances that differ only in the padding bytes they were parsed from
+    compare equal, because those bytes aren't kept.
+  - Every subclass's `__dataclass_fields__` is replaced by
+    `_FieldsWithoutPaddingOnInstances`. Through an instance it returns the fields
+    *without* padding, so `dataclasses.asdict()`, `astuple()`, `replace()` and
+    `copy.replace()` work and leave padding out. Through the class it returns all fields,
+    which subclassing and the struct format need.
+  - Inside binmap, use `dataclasses.fields(cls)` or `fields(type(self))` whenever
+    padding matters. `fields(self)` skips it.
 
 ### Adding a new datatype
 
@@ -228,9 +246,10 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   with native sizes (8 bytes on 64-bit Linux and macOS), but `bytes()` packs with standard
   sizes (4 bytes). So `obj.v = 2**40` is accepted and `bytes(obj)` then raises
   `struct.error`.
-- `dataclasses.asdict()` and `astuple()` raise `AttributeError` on classes with padding
-  fields, because `PaddingField.__get__` raises. See the `TODO` in
-  `TestPadClass.test_create_pad`.
+- `dataclasses.fields(SomeClass)` still lists padding, while `fields(instance)`,
+  `asdict()` and `astuple()` leave it out. So zipping `fields(SomeClass)` with
+  `astuple(obj)` silently misaligns the values, and code that walks the class's fields and
+  reads each one from an instance still raises.
 - `__datafields` is a class-level list, but `__post_init__` appends to it on every
   instantiation, so it grows without bound. `frombytes` only works because `zip()`
   truncates.

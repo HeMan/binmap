@@ -127,7 +127,8 @@ def padding(length: int = 1) -> dataclasses.Field:
     :param int lenght: Number of bytes of padded field
     :return: dataclass field
     """
-    return dataclasses.field(default=length, repr=False, metadata={"padding": True})  # type: ignore
+    # compare=False: padding can't be read, so the generated __eq__ must skip it
+    return dataclasses.field(default=length, repr=False, compare=False, metadata={"padding": True})  # type: ignore
 
 
 def constant(value: Union[int, float, str]) -> dataclasses.Field:
@@ -187,6 +188,29 @@ def calculatedfield(function: Callable, last=False) -> dataclasses.Field:
     return dataclasses.field(default=0, metadata={"function": function, "last": last})  # type: ignore
 
 
+class _FieldsWithoutPaddingOnInstances:
+    """
+    Replaces ``__dataclass_fields__`` on every ``BinmapDataclass`` subclass.
+
+    ``dataclasses.asdict()``, ``astuple()`` and ``replace()`` read every field
+    that ``dataclasses.fields(instance)`` returns. Padding fields can't be read,
+    so through an instance this returns the fields without padding. Through the
+    class it returns all fields: ``dataclasses`` needs them to build subclasses,
+    and binmap needs them for the struct format.
+    """
+
+    def __init__(self, fields: Dict[str, dataclasses.Field]):
+        self.fields = fields
+        self.instance_fields = {
+            name: field_
+            for name, field_ in fields.items()
+            if "padding" not in field_.metadata
+        }
+
+    def __get__(self, obj, owner):
+        return self.fields if obj is None else self.instance_fields
+
+
 @dataclasses.dataclass
 class BinmapDataclass:
     """
@@ -205,6 +229,11 @@ class BinmapDataclass:
         :param str byteorder: byteorder for binary data
         """
         dataclasses.dataclass(cls)
+        setattr(
+            cls,
+            "__dataclass_fields__",
+            _FieldsWithoutPaddingOnInstances(cls.__dict__["__dataclass_fields__"]),
+        )
         type_hints = get_type_hints(cls)
 
         cls.__typehints = type_hints
@@ -272,7 +301,7 @@ class BinmapDataclass:
         :param bytes _binarydata: Binary string that will be unpacked.
         """
         # Kludgy hack to keep order
-        for f in dataclasses.fields(self):
+        for f in dataclasses.fields(type(self)):
             if f.name.startswith("_BinmapDataclass__"):
                 continue
             self.__datafieldsmap.update({f.name: f})
