@@ -1,3 +1,4 @@
+# pyright: strict
 """Single-letter aliases for the types in :mod:`binmap.types`, named after their
 :py:mod:`struct` format characters."""
 

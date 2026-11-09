@@ -28,7 +28,7 @@ jobs:
         flake8 binmap tests --count --exit-zero --max-complexity=10 --statistics
     - name: Check with mypy
       run: |
-        mypy binmap tests/typecheck
+        mypy --strict --disallow-any-explicit binmap tests/typecheck
     # pyright is the engine behind VS Code's Pylance: user code must type-check
     # there too. Pinned so a pyright release can't break CI unannounced.
     - name: Check with pyright

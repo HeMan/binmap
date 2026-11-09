@@ -89,3 +89,14 @@ def _not_allowed() -> None:
     TempHum(tmp=1)  # type: ignore[call-arg]  # no such field
     TempHum(temp="hot")  # type: ignore[arg-type]
     packet.name = "text"  # type: ignore[assignment]  # strings are bytes
+
+    class WrongFactory(BinmapDataclass):
+        # a string field's factory on a number field
+        temp: unsignedchar = stringfield(4)  # type: ignore[assignment]
+
+    def wrong_checksum(self: object) -> int:
+        return 0
+
+    class WrongCalculation(BinmapDataclass):
+        # the function returns int, but the field holds bytes
+        name: string = calculatedfield(wrong_checksum)  # type: ignore[assignment]

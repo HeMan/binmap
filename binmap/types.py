@@ -1,3 +1,4 @@
+# pyright: strict
 """
 Type aliases for binmap fields.
 

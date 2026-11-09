@@ -1,3 +1,4 @@
+# pyright: strict
 import dataclasses
 import struct
 from dataclasses import InitVar
@@ -5,17 +6,20 @@ from enum import IntEnum, IntFlag
 from functools import partial
 from typing import (
     Annotated,
-    Any,
     Callable,
     ClassVar,
     Dict,
     FrozenSet,
     List,
     Literal,
+    NoReturn,
     Tuple,
     Type,
+    TypeVar,
     Union,
+    cast,
     dataclass_transform,
+    get_args,
     get_origin,
     get_type_hints,
 )
@@ -48,10 +52,10 @@ class BaseDescriptor:
 
     :param name: Variable name"""
 
-    def __set_name__(self, obj, name):
+    def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
 
-    def __init__(self, name=""):
+    def __init__(self, name: str = "") -> None:
         self.name = name
 
 
@@ -59,22 +63,12 @@ class BinField(BaseDescriptor):
     """BinField descriptor tries to pack it into a struct before setting the
     value as a bounds checker"""
 
-    def __get__(self, obj, owner):
+    def __get__(self, obj: "BinmapDataclass", owner: type) -> object:
         return obj.__dict__[self.name]
 
-    def __set__(self, obj, value):
-        # Each field's struct code, worked out once by __init_subclass__ from
-        # get_type_hints(cls). Never resolve type hints on the instance: Python
-        # 3.14+ (PEP 649) rejects that. The class lookup walks the MRO, so
-        # inherited fields are found too.
-        cls = type(obj)
-        code = cls._BinmapDataclass__codes.get(self.name)
-        if code is None:
-            raise ValueError(self.name)
-        # Pack with the class's byte order, like bytes() does. A bare code would
-        # use native sizes, which differ from the standard ones (e.g. "l" is 8
-        # bytes natively on 64-bit Linux but 4 bytes with ">" or "<").
-        struct.pack(cls._BinmapDataclass__byteorder + code, value)
+    def __set__(self, obj: "BinmapDataclass", value: object) -> None:
+        # _check_value belongs to the same machinery as this descriptor
+        type(obj)._check_value(self.name, value)  # pyright: ignore[reportPrivateUsage]
         obj.__dict__[self.name] = value
 
 
@@ -85,11 +79,11 @@ class StringField(BinField):
 
     :raises struct.error: when the value is too long"""
 
-    def __init__(self, name, maxlength):
+    def __init__(self, name: str, maxlength: int) -> None:
         super().__init__(name)
         self.maxlength = maxlength
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: "BinmapDataclass", value: object) -> None:
         if isinstance(value, (bytes, bytearray)) and len(value) > self.maxlength:
             raise struct.error(
                 f"{self.name} holds at most {self.maxlength} bytes, got {len(value)}"
@@ -102,11 +96,11 @@ class PaddingField(BaseDescriptor):
 
     :raises AttributeError: when trying to read, since it's only padding."""
 
-    def __get__(self, obj, owner):
+    def __get__(self, obj: "BinmapDataclass", owner: type) -> NoReturn:
         """Getting values fails"""
         raise AttributeError(f"Padding ({self.name}) is not readable")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: "BinmapDataclass", value: object) -> None:
         """Setting values does nothing"""
 
 
@@ -115,7 +109,7 @@ class EnumField(BinField):
     both strings and values when setting. Only values that has a corresponding
     string is allowed."""
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: "BinmapDataclass", value: object) -> None:
         datafieldsmap = {f.name: f for f in dataclasses.fields(obj)}
         if isinstance(value, str):
             datafieldsmap[self.name].metadata["enum"][value]
@@ -130,7 +124,7 @@ class ConstField(BinField):
     :raises AttributeError: Since it's a constant it raises and error when
       trying to set"""
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: "BinmapDataclass", value: object) -> None:
         if self.name in obj.__dict__:
             raise AttributeError(f"{self.name} is a constant")
         obj.__dict__[self.name] = value
@@ -141,20 +135,22 @@ class CalculatedField(BinField):
 
     :raises AttributeError: Trying to set the value is not allowed"""
 
-    def __init__(self, name, function):
+    def __init__(
+        self, name: str, function: Callable[["BinmapDataclass"], object]
+    ) -> None:
         self.name = name
         self.function = function
 
-    def __get__(self, obj, owner):
+    def __get__(self, obj: "BinmapDataclass", owner: type) -> object:
         return self.function(obj)
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: "BinmapDataclass", value: object) -> None:
         if self.name in obj.__dict__:
             raise AttributeError("Can't set a calculated field")
 
 
 # Plain Python types binmap also accepts as field types.
-_PLAIN_CODES: Dict[Any, str] = {
+_PLAIN_CODES: Dict[type, str] = {
     bool: "?",
     int: "i",
     float: "f",
@@ -163,7 +159,7 @@ _PLAIN_CODES: Dict[Any, str] = {
 }
 
 
-def _struct_code(hint: Any) -> str:
+def _struct_code(hint: object) -> str:
     """
     The struct format character for a field's type hint: the ``StructCode`` of
     an ``Annotated`` alias such as ``unsignedchar``, or the code for a plain
@@ -172,21 +168,36 @@ def _struct_code(hint: Any) -> str:
     :raises KeyError: for a type binmap can't pack
     """
     if get_origin(hint) is Annotated:
-        for metadata in hint.__metadata__:
-            if isinstance(metadata, b_types.StructCode):
-                return metadata.code
-        hint = hint.__origin__
-    return _PLAIN_CODES[hint]
+        python_type, *metadata = get_args(hint)
+        for item in metadata:
+            if isinstance(item, b_types.StructCode):
+                return item.code
+        hint = python_type
+    if isinstance(hint, type):
+        return _PLAIN_CODES[hint]
+    raise KeyError(hint)
 
 
-# The field factories below return Any: type checkers then take each call for
-# the field's default value, so `name: string = stringfield(8)` type-checks.
-# constant() and autolength() are also listed as dataclass_transform field
-# specifiers, and their `init: Literal[False]` tells type checkers that, like at
-# runtime, those fields aren't __init__ arguments.
+# S is the class a calculated field's function receives, T the field's value type
+S = TypeVar("S")
+T = TypeVar("T")
+
+# The field factories return a dataclasses.Field at runtime, but are typed as
+# returning the value the field holds, like dataclasses.field() itself in the
+# standard type stubs. Type checkers then take a call for the field's default,
+# so `name: string = stringfield(8)` type-checks, and a factory used on a field
+# of the wrong type is reported.
+#
+# constant() and autolength() are also dataclass_transform field specifiers:
+# their `init: Literal[False]` tells type checkers that, like at runtime, those
+# fields aren't __init__ arguments. The other factories must not be specifiers:
+# type checkers treat a specifier call without `default=` as a required field,
+# and since the inherited __binarydata has a default, every class using one
+# would be reported as invalid. That's why type checkers can't catch a missing
+# value for an enumfield() without a default, which fails at runtime.
 
 
-def padding(length: int = 1) -> Any:
+def padding(length: int = 1) -> int:
     """
     Field generator function for padding elements
 
@@ -199,7 +210,7 @@ def padding(length: int = 1) -> Any:
     )
 
 
-def constant(value: Any, *, init: Literal[False] = False) -> Any:
+def constant(value: T, *, init: Literal[False] = False) -> T:
     """
     Field generator function for constant elements
 
@@ -211,7 +222,7 @@ def constant(value: Any, *, init: Literal[False] = False) -> Any:
     return dataclasses.field(default=value, init=False, metadata={"constant": True})
 
 
-def autolength(offset: int = 0, *, init: Literal[False] = False) -> Any:
+def autolength(offset: int = 0, *, init: Literal[False] = False) -> int:
     """
     Field generator function for autolength fields
 
@@ -223,7 +234,7 @@ def autolength(offset: int = 0, *, init: Literal[False] = False) -> Any:
     return dataclasses.field(default=offset, init=False, metadata={"autolength": True})
 
 
-def stringfield(length: int = 1, default: bytes = b"") -> Any:
+def stringfield(length: int = 1, default: bytes = b"") -> bytes:
     """
     Field generator function for string and pascalstring fields.
 
@@ -245,26 +256,32 @@ def stringfield(length: int = 1, default: bytes = b"") -> Any:
 def enumfield(
     enumclass: Union[Type[IntEnum], Type[IntFlag]],
     default: Union[IntEnum, IntFlag, int, None] = None,
-) -> Any:
+) -> int:
     """
     Field generator function for enum field
 
     :param enumclass: The IntEnum or IntFlag class the values must belong to.
-    :param default: default value
+    :param default: default value. Without one, the field must be given when
+      creating an instance.
     :return: dataclass field
     """
-    return dataclasses.field(default=default, metadata={"enum": enumclass})
+    # The field holds an IntEnum/IntFlag member or a plain int: int covers both.
+    return cast(int, dataclasses.field(default=default, metadata={"enum": enumclass}))
 
 
-def calculatedfield(function: Callable[[Any], Any], last: bool = False) -> Any:
+def calculatedfield(function: Callable[[S], T], last: bool = False) -> T:
     """
     Field generator function for calculated fields
 
-    :param Callable function: function that calculates the field.
+    :param Callable function: function that calculates the field. It's called
+      with the instance and returns the field's value.
     :param bool last: pack the field last, whatever its position in the class
     :return: dataclass field
     """
-    return dataclasses.field(default=0, metadata={"function": function, "last": last})
+    # The default 0 is never used: the value always comes from the function,
+    # whose return type is the field's type.
+    field_ = dataclasses.field(default=0, metadata={"function": function, "last": last})
+    return cast(T, field_)
 
 
 class _FieldsWithoutPaddingOnInstances:
@@ -278,7 +295,7 @@ class _FieldsWithoutPaddingOnInstances:
     and binmap needs them for the struct format.
     """
 
-    def __init__(self, fields: Dict[str, dataclasses.Field]):
+    def __init__(self, fields: Dict[str, "dataclasses.Field[object]"]) -> None:
         self.fields = fields
         self.instance_fields = {
             name: field_
@@ -286,7 +303,9 @@ class _FieldsWithoutPaddingOnInstances:
             if "padding" not in field_.metadata
         }
 
-    def __get__(self, obj, owner):
+    def __get__(
+        self, obj: object, owner: type
+    ) -> Dict[str, "dataclasses.Field[object]"]:
         return self.fields if obj is None else self.instance_fields
 
 
@@ -304,7 +323,7 @@ class BinmapDataclass:
     # checkers treat the parameter as positional-only (Cls(b"...")).
     __binarydata: InitVar[bytes] = b""  # pyright: ignore[reportGeneralTypeIssues]
     __datafields: ClassVar[Tuple[str, ...]]
-    __datafieldsmap: ClassVar[Dict[str, dataclasses.Field]]
+    __datafieldsmap: ClassVar[Dict[str, "dataclasses.Field[object]"]]
     __formatstring: ClassVar[str]
     __byteorder: ClassVar[str]
     __codes: ClassVar[Dict[str, str]]
@@ -347,13 +366,15 @@ class BinmapDataclass:
         lastname = ""
         codes: Dict[str, str] = {}
 
-        lastfield = ""
+        lastfield: str = ""
         for field_ in dataclasses.fields(cls):
             if field_.name.startswith("_BinmapDataclass__"):
                 continue
             _type = _struct_code(type_hints[field_.name])
             codes[field_.name] = _type
-            _base: Any = PaddingField if _type == "x" else BinField
+            _base: Callable[[str], BaseDescriptor] = (
+                PaddingField if _type == "x" else BinField
+            )
             if "constant" in field_.metadata:
                 _base = ConstField
             elif "enum" in field_.metadata:
@@ -363,19 +384,21 @@ class BinmapDataclass:
             elif "function" in field_.metadata:
                 _base = partial(CalculatedField, function=field_.metadata["function"])
             elif _type in ("s", "p"):
-                length = field_.metadata["length"]
+                length: int = field_.metadata["length"]
                 # A pascal string spends one byte on its length, which can't
                 # count past 255.
                 maxlength = length if _type == "s" else min(length - 1, 255)
-                if len(field_.default) > maxlength:  # type: ignore
+                default = cast(bytes, field_.default)  # stringfield() sets bytes
+                if len(default) > maxlength:
                     raise ValueError(
-                        f"Default for {field_.name} is {len(field_.default)} bytes, "  # type: ignore
+                        f"Default for {field_.name} is {len(default)} bytes, "
                         f"but it holds at most {maxlength}"
                     )
                 _base = partial(StringField, maxlength=maxlength)
-            setattr(cls, field_.name, _base(name=field_.name))
+            setattr(cls, field_.name, _base(field_.name))
             if _type == "x":
-                _type = field_.default * _type  # type: ignore
+                # padding()'s default is the number of bytes to pad
+                _type *= cast(int, field_.default)
             elif _type in ("s", "p"):
                 _type = str(field_.metadata["length"]) + _type
             if "last" in field_.metadata and field_.metadata["last"]:
@@ -393,7 +416,27 @@ class BinmapDataclass:
         cls.__datafields = tuple(datafields)
         cls.__codes = codes
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    @classmethod
+    def _check_value(cls, name: str, value: object) -> None:
+        """
+        Raises if ``value`` can't be packed into field ``name``; used by
+        :class:`BinField`.
+
+        :raises struct.error: if the value doesn't fit the field's type
+        """
+        # Each field's struct code, worked out once by __init_subclass__ from
+        # get_type_hints(cls). Never resolve type hints on the instance: Python
+        # 3.14+ (PEP 649) rejects that. The class lookup walks the MRO, so
+        # inherited fields are found too.
+        code = cls.__codes.get(name)
+        if code is None:
+            raise ValueError(name)
+        # Pack with the class's byte order, like bytes() does. A bare code would
+        # use native sizes, which differ from the standard ones (e.g. "l" is 8
+        # bytes natively on 64-bit Linux but 4 bytes with ">" or "<").
+        struct.pack(cls.__byteorder + code, value)
+
+    def __setattr__(self, name: str, value: object) -> None:
         """
         Only fields, and class attributes that handle assignment themselves
         (such as properties), can be assigned.
@@ -415,8 +458,8 @@ class BinmapDataclass:
         :return: Binary string packed.
         :rtype: bytes
         """
-        values = []
-        lastvalue = None
+        values: List[object] = []
+        lastvalue: object = None
         for k, v in self.__dict__.items():
             if k.startswith("_BinmapDataclass__"):
                 continue
@@ -452,7 +495,11 @@ class BinmapDataclass:
                 self.__dict__.update({f.name: f.default})
             if "autolength" in f.metadata:
                 self.__dict__.update(
-                    {f.name: struct.calcsize(self.__formatstring) + f.default}  # type: ignore
+                    # autolength()'s default is the offset to add
+                    {
+                        f.name: struct.calcsize(self.__formatstring)
+                        + cast(int, f.default)
+                    }
                 )
             if "function" in f.metadata:
                 self.__dict__.update({f.name: f.metadata["function"]})
@@ -475,7 +522,7 @@ class BinmapDataclass:
         args = struct.unpack(self.__formatstring, value)
         previous = self.__dict__.copy()
         try:
-            calculated = []
+            calculated: List[Tuple[object, Callable[[BinmapDataclass], object]]] = []
             # strict: the struct has exactly one value per data field
             for arg, name in zip(args, self.__datafields, strict=True):
                 field_ = self.__datafieldsmap[name]

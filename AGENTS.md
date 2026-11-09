@@ -83,7 +83,7 @@ uv run --isolated --python 3.11 --with pytest pytest -v       # another Python, 
 
 # Type check the package and the user-code sample, as CI does. pyright is the
 # engine behind VS Code's Pylance; keep its version in sync with the workflow.
-uv run mypy binmap tests/typecheck
+uv run mypy --strict --disallow-any-explicit binmap tests/typecheck
 uvx pyright@1.1.414 binmap tests/typecheck
 
 # Lint: CI only *fails* on syntax errors / undefined names:
@@ -259,11 +259,21 @@ not what `__init_subclass__` does at runtime. Keep these in place:
 - **The type aliases are `Annotated`**, so type checkers see `int`, `float`, `bool` or
   `bytes`, and `temp: unsignedchar = 0` type-checks. Don't go back to `NewType`, which
   rejects plain values.
-- **The field factories return `Any`**, so a call reads as the field's default.
+- **The field factories are typed as returning the value the field holds**, like
+  `dataclasses.field()` in the standard type stubs, although they return a `Field` at
+  runtime.
+  - `padding()`/`autolength()` → `int`, `stringfield()` → `bytes`, `enumfield()` →
+    `int`, `constant(value: T)` → `T`, and `calculatedfield(function: Callable[[S], T])`
+    → `T`.
+  - A call then reads as the field's default, and a factory used on a field of the wrong
+    type is reported.
   - `constant()` and `autolength()` are also the transform's field specifiers. Their
     `init: Literal[False]` parameter tells type checkers they aren't `__init__`
     arguments, matching runtime.
-  - Keep the factories' return types and the `init` parameters when you change them.
+  - Don't make the other factories field specifiers. Type checkers treat a specifier
+    call without `default=` as a required field, which isn't allowed after the inherited
+    `__binarydata` (it has a default). As a result, type checkers can't flag a missing
+    value for an `enumfield()` without a default, which fails at runtime.
 - **`py.typed` and `__all__`.** Add new public names to `__all__`: with `py.typed`,
   pyright treats a name that's only imported into the module (like `b_types`) as
   private, and Sphinx autodoc documents only what `__all__` lists.
@@ -312,10 +322,18 @@ not what `__init_subclass__` does at runtime. Keep these in place:
   - flake8 `E721` in `tests/test_binmap.py`.
 - Docstrings use reST/Sphinx field lists (`:param x:`, `:return:`, `:raises X:`), because
   autodoc renders them into the published docs.
-- mypy (non-strict) and pyright (its default "standard" mode) both run on `binmap` and
-  `tests/typecheck`. The one `pyright: ignore` in `binmap/__init__.py`, on the
-  name-mangled `__binarydata`, is intentional: the mangling keeps it from clashing with
-  subclass fields and makes it positional-only for type checkers.
+- **No `Any`.**
+  - binmap is checked with `mypy --strict --disallow-any-explicit` and with pyright in
+    strict mode (`# pyright: strict` at the top of its modules). The user-code sample
+    runs in pyright's default mode, as editors do.
+  - Annotate everything. Use `object` for values that really can be anything, so the
+    checker makes you narrow them before use, and `cast()` (with a comment) where the
+    standard library's own stubs say `Any`, e.g. `Field.default`.
+  - The two `pyright: ignore`s in `binmap/__init__.py` are intentional:
+    - The name-mangled `__binarydata` can't clash with subclass fields and is
+      positional-only for type checkers.
+    - `BinField.__set__` calls `_check_value`, which sits on the class because only
+      there do the mangled `__codes`/`__byteorder` resolve for type checkers.
 - **No runtime dependencies.** Keep the package stdlib-only.
 
 ## Known issues
