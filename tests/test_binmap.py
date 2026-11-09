@@ -280,6 +280,10 @@ class StringWithDefault(binmap.BinmapDataclass):
     defaultstring: b_types.string = binmap.stringfield(10, default=b"hellohello")
 
 
+class PascalStrings(binmap.BinmapDataclass):
+    name: b_types.pascalstring = binmap.stringfield(8)
+
+
 class TestStrings:
     def test_strings(self):
         s = Strings()
@@ -297,6 +301,72 @@ class TestStrings:
         assert str(sd) == "StringWithDefault(defaultstring=b'hellohello')"
         sd1 = StringWithDefault(defaultstring=b"worldworld")
         assert sd1.defaultstring == b"worldworld"
+
+    def test_string_types_are_bytes(self):
+        assert b_types.string.__supertype__ is bytes
+        assert b_types.pascalstring.__supertype__ is bytes
+
+    def test_string_shorter_is_padded(self):
+        s = Strings(identity=b"abc")
+        assert bytes(s) == b"abc" + b"\x00" * 7
+        assert Strings(bytes(s)).identity == b"abc" + b"\x00" * 7
+
+    def test_string_too_long(self):
+        s = Strings()
+        with pytest.raises(struct.error) as excinfo:
+            s.identity = b"12345678901"
+        assert "identity holds at most 10 bytes, got 11" in str(excinfo)
+        assert s.identity == b"\x00" * 10
+        with pytest.raises(struct.error) as excinfo:
+            Strings(identity=b"12345678901")
+        assert "identity holds at most 10 bytes, got 11" in str(excinfo)
+
+    def test_string_wrong_type(self):
+        with pytest.raises(struct.error) as excinfo:
+            Strings(identity="text")
+        assert "argument for 's' must be a bytes object" in str(excinfo)
+
+    def test_pascalstring_default_is_empty(self):
+        p = PascalStrings()
+        assert p.name == b""
+        assert bytes(p) == b"\x00" * 8
+        assert PascalStrings(bytes(p)) == p
+
+    def test_pascalstring_capacity(self):
+        # One byte holds the length, so stringfield(8) fits 7 bytes
+        p = PascalStrings(name=b"7 bytes")
+        assert bytes(p) == b"\x077 bytes"
+        assert PascalStrings(bytes(p)).name == b"7 bytes"
+        with pytest.raises(struct.error) as excinfo:
+            p.name = b"8 bytes!"
+        assert "name holds at most 7 bytes, got 8" in str(excinfo)
+        assert p.name == b"7 bytes"
+
+    def test_long_pascalstring_capacity(self):
+        # The length byte can't count past 255, whatever the field's size
+        class LongPascal(binmap.BinmapDataclass):
+            text: b_types.pascalstring = binmap.stringfield(300)
+
+        lp = LongPascal(text=b"x" * 255)
+        assert LongPascal(bytes(lp)).text == b"x" * 255
+        with pytest.raises(struct.error) as excinfo:
+            lp.text = b"x" * 256
+        assert "text holds at most 255 bytes, got 256" in str(excinfo)
+
+    def test_default_too_long(self):
+        with pytest.raises(ValueError) as excinfo:
+
+            class TooLongDefault(binmap.BinmapDataclass):
+                name: b_types.string = binmap.stringfield(3, default=b"abcd")
+
+        assert "Default for name is 4 bytes, but it holds at most 3" in str(excinfo)
+
+        with pytest.raises(ValueError) as excinfo:
+
+            class TooLongPascalDefault(binmap.BinmapDataclass):
+                name: b_types.pascalstring = binmap.stringfield(4, default=b"abcd")
+
+        assert "Default for name is 4 bytes, but it holds at most 3" in str(excinfo)
 
 
 class Pad(binmap.BinmapDataclass):
