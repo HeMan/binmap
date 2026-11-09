@@ -193,6 +193,11 @@ Read this before touching `binmap/__init__.py`.
 - **`frombytes` checks data against the class.** Constant, autolength and calculated
   fields are compared with what the class expects, and a mismatch raises `ValueError`
   ("Constant doesn't match binary data", "Length doesn't match", "Wrong calculated value").
+  - Constants and autolength are checked as they come.
+  - Calculated fields are checked only after every other field is assigned, because their
+    function may read fields that come later in the struct.
+  - It's all-or-nothing: on any error, including an invalid enum value, the instance's
+    `__dict__` is restored and the exception re-raised. Keep it that way.
 - **Strings are `bytes`.** `string` and `pascalstring` values are `bytes` even though
   their `NewType` base is `str`. The length comes from `stringfield(length)`.
 - **Padding.** The field's default is its byte count. Reading it raises `AttributeError`
@@ -270,13 +275,6 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   `asdict()` and `astuple()` leave it out. So zipping `fields(SomeClass)` with
   `astuple(obj)` silently misaligns the values, and code that walks the class's fields and
   reads each one from an instance still raises.
-- A `calculatedfield` that isn't `last` can't parse its own bytes if fields it reads are
-  declared after it.
-  - `frombytes` checks each calculated value as soon as it reaches it, before the later
-    fields are set, so the function sees their defaults.
-  - Declare calculated fields after the fields they read, or use `last=True`.
-  - The fix is to assign every plain field first and check constants, autolength and
-    calculated fields afterwards.
 - `.readthedocs.yml` uses the deprecated `python.version: 3.7` form, and Read the Docs
   now requires a `build:` section.
 - `find_packages()` in `setup.py` also picks up `tests/`, so a top-level `tests` package
