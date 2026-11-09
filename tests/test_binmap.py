@@ -338,6 +338,24 @@ class TestPadClass:
         assert [f.name for f in fields(Pad(temp=1))] == ["temp", "humidity"]
         assert [f.name for f in fields(Pad)] == ["temp", "pad", "humidity"]
 
+    def test_compare(self):
+        assert Pad(temp=10, humidity=60) == Pad(temp=10, humidity=60)
+        assert Pad(temp=10, humidity=60) != Pad(temp=11, humidity=60)
+        # The padding bytes aren't kept, so they can't make instances differ
+        assert Pad(b"\x0a\x10\x20\x3c") == Pad(b"\x0a\x00\x00\x3c")
+
+    def test_advanced_compare(self):
+        assert AdvancedPad(temp=10, humidity=60) == AdvancedPad(temp=10, humidity=60)
+        assert AdvancedPad(temp=10, humidity=60) != AdvancedPad(temp=10, humidity=61)
+
+    def test_inherited_padding_compare(self):
+        class Child(Pad):
+            _pad2: b_types.pad = binmap.padding(1)
+            lux: b_types.unsignedshort = 0
+
+        assert Child(temp=1, lux=2) == Child(temp=1, lux=2)
+        assert Child(temp=1, lux=2) != Child(temp=1, lux=3)
+
 
 class WindEnum(IntEnum):
     North = 0
