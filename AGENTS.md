@@ -95,11 +95,12 @@ uv run make -C docs html
 
 ### Python versions
 
-- CI tests **3.11 through 3.15**, every CPython version that isn't end-of-life. Code
-  must work on 3.11, the oldest of them.
+- CI tests **3.11 through 3.15**, every CPython version that isn't end-of-life.
+  `python_requires=">=3.11"` in `setup.py` matches, so code must work on 3.11.
   - When a version reaches end-of-life (see endoflife.date), remove it from the matrix in
-    `.github/workflows/pythonpackage.yml` and from the `setup.py` classifiers.
-  - Add new releases to both places the same way.
+    `.github/workflows/pythonpackage.yml` and from the `setup.py` classifiers, and raise
+    `python_requires`.
+  - Add new releases to the matrix and the classifiers.
 - **Resolve type hints on the class, never on an instance.** Python 3.14+ (PEP 649/749)
   rejects `get_type_hints(instance)`, which is what used to break 3.14.
   - `__init_subclass__` resolves `get_type_hints(cls)` once and stores the result on the
@@ -235,9 +236,8 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   truncates.
 - `.readthedocs.yml` uses the deprecated `python.version: 3.7` form, and Read the Docs
   now requires a `build:` section.
-- `setup.py` sets no `python_requires`, so pip still installs binmap on Python 3.10 and
-  older, which CI no longer tests. Because `find_packages()` also picks up `tests/`, a
-  top-level `tests` package gets installed.
+- `find_packages()` in `setup.py` also picks up `tests/`, so a top-level `tests` package
+  gets installed.
 - `make -C docs html` writes to `docs/build/`, but `.gitignore` only ignores
   `docs/_build/`. Don't commit build output.
 - `docs/source/conf.py` points `html_static_path` at a `_static` directory that doesn't
