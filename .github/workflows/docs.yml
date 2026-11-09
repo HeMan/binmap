@@ -1,0 +1,62 @@
+# Builds the documentation for every pushed branch (warnings are errors) and
+# publishes it to GitHub Pages, one folder per branch:
+#   https://heman.github.io/binmap/<branch>/
+# A deleted branch's folder is removed. Read the Docs (.readthedocs.yml) stays
+# the main documentation site for master and releases.
+
+name: Documentation
+
+on:
+  push:
+    branches-ignore:
+      - 'dependabot/**'
+      - 'gh-pages'
+  delete:
+
+permissions:
+  contents: write
+
+# One gh-pages update at a time, so runs for different branches don't race.
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up uv and Python
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: '3.14'
+        activate-environment: true
+    - name: Install documentation requirements
+      run: |
+        uv pip install -r requirements-doc.txt
+    - name: Build documentation
+      env:
+        DOCS_BRANCH: ${{ github.ref_name }}
+      run: |
+        sphinx-build -W --keep-going -b html docs/source _site
+    - name: Publish to gh-pages
+      env:
+        BRANCH: ${{ github.ref_name }}
+      run: |
+        .github/scripts/gh-pages.sh publish "$BRANCH" _site
+
+  remove:
+    if: >-
+      github.event_name == 'delete' && github.event.ref_type == 'branch'
+      && !startsWith(github.event.ref, 'dependabot/')
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Remove from gh-pages
+      env:
+        BRANCH: ${{ github.event.ref }}
+      run: |
+        .github/scripts/gh-pages.sh remove "$BRANCH"
