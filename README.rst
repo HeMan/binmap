@@ -53,6 +53,7 @@ Padding
 Padding is a field type and datatype that is `length` bytes long, and will not show up as
 attributes in the dataclass. Trying to assign it a value will be silently
 ignored and reading from will raise the `AttributeException` exception.
+Padding is also left out of `dataclasses.asdict()` and `dataclasses.astuple()`.
 
 .. code-block:: python
 
@@ -64,6 +65,8 @@ ignored and reading from will raise the `AttributeException` exception.
    >>> pd.temp = 14
    >>> print(bytes(pd))
    b'\x0e\x00\x00\x00\x00\x00'
+   >>> print(asdict(pd))
+   {'temp': 14}
 
 Constant
 --------

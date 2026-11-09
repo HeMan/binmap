@@ -170,6 +170,13 @@ Read this before touching `binmap/__init__.py`.
   their `NewType` base is `str`. The length comes from `stringfield(length)`.
 - **Padding.** The field's default is its byte count. Reading it raises `AttributeError`,
   writing it is a no-op, and it's `repr=False`.
+  - Every subclass's `__dataclass_fields__` is replaced by
+    `_FieldsWithoutPaddingOnInstances`. Through an instance it returns the fields
+    *without* padding, so `dataclasses.asdict()`, `astuple()`, `replace()` and
+    `copy.replace()` work and leave padding out. Through the class it returns all fields,
+    which subclassing and the struct format need.
+  - Inside binmap, use `dataclasses.fields(cls)` or `fields(type(self))` whenever
+    padding matters. `fields(self)` skips it.
 
 ### Adding a new datatype
 
@@ -228,9 +235,9 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   with native sizes (8 bytes on 64-bit Linux and macOS), but `bytes()` packs with standard
   sizes (4 bytes). So `obj.v = 2**40` is accepted and `bytes(obj)` then raises
   `struct.error`.
-- `dataclasses.asdict()` and `astuple()` raise `AttributeError` on classes with padding
-  fields, because `PaddingField.__get__` raises. See the `TODO` in
-  `TestPadClass.test_create_pad`.
+- `==` raises `AttributeError` on classes with padding fields. The generated `__eq__`
+  compares every field, including padding, which can't be read. Passing `compare=False`
+  in `padding()` would fix it.
 - `__datafields` is a class-level list, but `__post_init__` appends to it on every
   instantiation, so it grows without bound. `frombytes` only works because `zip()`
   truncates.
