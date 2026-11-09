@@ -127,7 +127,8 @@ def padding(length: int = 1) -> dataclasses.Field:
     :param int lenght: Number of bytes of padded field
     :return: dataclass field
     """
-    return dataclasses.field(default=length, repr=False, metadata={"padding": True})  # type: ignore
+    # compare=False: padding can't be read, so the generated __eq__ must skip it
+    return dataclasses.field(default=length, repr=False, compare=False, metadata={"padding": True})  # type: ignore
 
 
 def constant(value: Union[int, float, str]) -> dataclasses.Field:
