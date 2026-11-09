@@ -27,10 +27,11 @@ class BinField(BaseDescriptor):
         return obj.__dict__[self.name]
 
     def __set__(self, obj, value):
-        # Resolve hints on the class, not the instance: Python 3.14+ (PEP 649)
-        # rejects instances, and the class lookup walks the MRO so inherited
-        # fields are found as well.
-        type_hints = get_type_hints(type(obj))
+        # The class's type hints, resolved once by __init_subclass__ with
+        # get_type_hints(cls). Never resolve them on the instance: Python 3.14+
+        # (PEP 649) rejects that. The class lookup walks the MRO, so inherited
+        # fields are found too.
+        type_hints = type(obj)._BinmapDataclass__typehints
         if self.name not in type_hints:
             raise ValueError(self.name)
         struct.pack(datatypemapping[type_hints[self.name]][1], value)
@@ -196,6 +197,7 @@ class BinmapDataclass:
     __datafields: ClassVar[List[str]]
     __datafieldsmap: ClassVar[Dict]
     __formatstring: ClassVar[str]
+    __typehints: ClassVar[Dict[str, type]]
 
     def __init_subclass__(cls, byteorder: str = ">"):
         """
@@ -205,6 +207,7 @@ class BinmapDataclass:
         dataclasses.dataclass(cls)
         type_hints = get_type_hints(cls)
 
+        cls.__typehints = type_hints
         cls.__formatstring = byteorder
         cls.__datafieldsmap = {}
         cls.__datafields = []
