@@ -54,6 +54,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#binmap.ConstField"><code class="docutils literal notranslate"><span class="pre">ConstField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.EnumField"><code class="docutils literal notranslate"><span class="pre">EnumField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.PaddingField"><code class="docutils literal notranslate"><span class="pre">PaddingField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.StringField"><code class="docutils literal notranslate"><span class="pre">StringField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap._FieldsWithoutPaddingOnInstances"><code class="docutils literal notranslate"><span class="pre">_FieldsWithoutPaddingOnInstances</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.autolength"><code class="docutils literal notranslate"><span class="pre">autolength()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.calculatedfield"><code class="docutils literal notranslate"><span class="pre">calculatedfield()</span></code></a></li>
@@ -181,6 +182,20 @@ string is allowed.</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="binmap.StringField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">StringField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxlength</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.StringField" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BinField" title="binmap.BinField"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinField</span></code></a></p>
+<p>StringField descriptor is a BinField for string and pascalstring fields
+that also rejects values longer than the field holds, which struct.pack
+would otherwise cut silently.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>struct.error</strong> – when the value is too long</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="binmap._FieldsWithoutPaddingOnInstances">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">_FieldsWithoutPaddingOnInstances</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Field</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap._FieldsWithoutPaddingOnInstances" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
@@ -268,13 +283,15 @@ and binmap needs them for the struct format.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="binmap.stringfield">
 <span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">stringfield</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">b''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Field</span></span></span><a class="headerlink" href="#binmap.stringfield" title="Link to this definition"></a></dt>
-<dd><p>Field generator function for string fields.</p>
+<dd><p>Field generator function for string and pascalstring fields.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>lenght</strong> (<em>int</em>) – lengt of the string.</p></li>
-<li><p><strong>default</strong> (<em>bytes</em>) – default value of the string</p></li>
-<li><p><strong>fillchar</strong> (<em>bytes</em>) – char to pad the string with</p></li>
+<li><p><strong>length</strong> (<em>int</em>) – size of the field in bytes. A pascalstring uses one of
+them for its length, so it holds at most <code class="docutils literal notranslate"><span class="pre">length</span> <span class="pre">-</span> <span class="pre">1</span></code> bytes (and never
+more than 255).</p></li>
+<li><p><strong>default</strong> (<em>bytes</em>) – default value. Left out (or <code class="docutils literal notranslate"><span class="pre">b&quot;&quot;</span></code>), a string
+defaults to <code class="docutils literal notranslate"><span class="pre">length</span></code> zero bytes and a pascalstring to <code class="docutils literal notranslate"><span class="pre">b&quot;&quot;</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

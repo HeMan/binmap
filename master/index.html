@@ -124,8 +124,9 @@ typehinted datatype it will be added to the binary output from the class.</p>
 <section id="strings">
 <h2>Strings<a class="headerlink" href="#strings" title="Link to this heading"></a></h2>
 <p><cite>string</cite> and <cite>pascalstring</cite> fields have a fixed length in bytes, set with
-<cite>stringfield(length)</cite>. Their values are <cite>bytes</cite>, not <cite>str</cite>. The default is <cite>length</cite>
-zero bytes; <cite>stringfield(length, default=b”…”)</cite> sets another one.</p>
+<cite>stringfield(length)</cite>. Their values are <cite>bytes</cite>, not <cite>str</cite>. By default a <cite>string</cite> is
+<cite>length</cite> zero bytes and a <cite>pascalstring</cite> is empty; <cite>stringfield(length, default=b”…”)</cite>
+sets another default.</p>
 <p>A <cite>string</cite> is padded with zero bytes to its length, and keeps them when parsed:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Named</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="n">name</span><span class="p">:</span> <span class="n">string</span> <span class="o">=</span> <span class="n">stringfield</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
@@ -137,7 +138,7 @@ zero bytes; <cite>stringfield(length, default=b”…”)</cite> sets another on
 </pre></div>
 </div>
 <p>A <cite>pascalstring</cite> stores the string’s length in its first byte, so it holds at most
-<cite>length - 1</cite> bytes, and parsing returns just the string:</p>
+<cite>length - 1</cite> bytes (and never more than 255), and parsing returns just the string:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">PascalNamed</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="n">name</span><span class="p">:</span> <span class="n">pascalstring</span> <span class="o">=</span> <span class="n">stringfield</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
 <span class="gp">...</span>
@@ -147,7 +148,13 @@ zero bytes; <cite>stringfield(length, default=b”…”)</cite> sets another on
 <span class="go">b'binmap'</span>
 </pre></div>
 </div>
-<p>A value longer than the field is cut to fit when packed.</p>
+<p>A value longer than the field holds is rejected, instead of being cut:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Named</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">b</span><span class="s2">"much too long"</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">struct.error</span>: <span class="n">name holds at most 8 bytes, got 13</span>
+</pre></div>
+</div>
 </section>
 <section id="padding">
 <h2>Padding<a class="headerlink" href="#padding" title="Link to this heading"></a></h2>
@@ -277,6 +284,7 @@ function must be declared when the field is added.</p>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.ConstField"><code class="docutils literal notranslate"><span class="pre">ConstField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.EnumField"><code class="docutils literal notranslate"><span class="pre">EnumField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.PaddingField"><code class="docutils literal notranslate"><span class="pre">PaddingField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.StringField"><code class="docutils literal notranslate"><span class="pre">StringField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap._FieldsWithoutPaddingOnInstances"><code class="docutils literal notranslate"><span class="pre">_FieldsWithoutPaddingOnInstances</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.autolength"><code class="docutils literal notranslate"><span class="pre">autolength()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.calculatedfield"><code class="docutils literal notranslate"><span class="pre">calculatedfield()</span></code></a></li>
