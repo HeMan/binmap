@@ -1014,6 +1014,55 @@ class TestCalculatedField:
         assert (cf.temp, cf.hum, cf.checksum) == (-27, 10, 239)
         assert bytes(cf) == b"\xe5\x0a\xef"
 
+    def test_calculated_field_follows_changes(self):
+        cf = CalculatedField(temp=-27, hum=10)
+        assert cf.checksum == 239
+        cf.temp = 5
+        assert cf.checksum == 15
+        cf.hum = 200
+        assert cf.checksum == 205
+        assert bytes(cf) == b"\x05\xc8\xcd"
+        assert asdict(cf) == {"temp": 5, "hum": 200, "checksum": 205}
+        assert CalculatedField(bytes(cf)) == cf
+
+    def test_calculated_field_follows_changes_after_parsing(self):
+        cf = CalculatedField(b"\xe2\x12\xf4")
+        cf.hum = 20
+        assert cf.checksum == 246  # (-30 + 20) & 0xFF
+        assert bytes(cf) == b"\xe2\x14\xf6"
+        assert CalculatedField(bytes(cf)) == cf
+
+    def test_calculated_field_follows_frombytes(self):
+        cf = CalculatedField(temp=1, hum=2)
+        assert cf.checksum == 3
+        cf.frombytes(b"\x0a\x14\x1e")
+        assert cf.checksum == 30
+        cf.temp = 11
+        assert cf.checksum == 31
+        assert bytes(cf) == b"\x0b\x14\x1f"
+
+    def test_calculated_field_last_follows_changes(self):
+        cfl = CalculatedFieldLast(b"\x0a\x14\x1e")
+        cfl.temp = 1
+        cfl.hum = 2
+        assert cfl.checksum == 3
+        assert bytes(cfl) == b"\x01\x02\x03"
+        assert CalculatedFieldLast(bytes(cfl)).checksum == 3
+
+    def test_calculated_field_middle_follows_changes(self):
+        cfm = CalculatedFieldMiddle(b"\x0a\x1e\x14")
+        cfm.hum = 30
+        assert cfm.checksum == 40
+        assert bytes(cfm) == b"\x0a\x28\x1e"
+        assert CalculatedFieldMiddle(bytes(cfm)).hum == 30
+
+    def test_calculated_field_after_rejected_change(self):
+        cf = CalculatedField(temp=10, hum=20)
+        with pytest.raises(struct.error):
+            cf.hum = 256
+        assert cf.checksum == 30
+        assert bytes(cf) == b"\x0a\x14\x1e"
+
     def test_calculated_field_multi_last(self):
         with pytest.raises(ValueError) as excinfo:
 
