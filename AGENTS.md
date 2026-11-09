@@ -50,8 +50,10 @@ The dev environment is managed with [uv](https://docs.astral.sh/uv/), used as a
 venv/pip front end. There is no `uv sync` and no `uv.lock`. `uv venv` creates `.venv`
 with Python 3.14 from `.python-version`, and uv downloads that Python if it isn't
 installed. Tests import `binmap` from the repo root, so no editable install is needed.
-When the pin changes, an existing `.venv` stays on the old Python. Recreate it with
-`uv venv --clear` and reinstall the requirements.
+When the pin changes, an existing `.venv` stays on the old Python. `uv run` then *skips*
+it and silently runs the newly pinned interpreter from elsewhere, without the dev tools
+(e.g. `Failed to spawn: black`). Recreate it with `uv venv --clear` and reinstall the
+requirements.
 
 **Deactivate any other virtualenv first.** `uv pip` installs into an activated
 `VIRTUAL_ENV`, but `uv run` always uses `.venv`. With another virtualenv active, you
