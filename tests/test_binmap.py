@@ -699,12 +699,6 @@ class TestInheritance:
             b.value = 70000
         assert "format requires 0 <= number <=" in str(excinfo)
 
-    @pytest.mark.xfail(
-        raises=struct.error,
-        strict=True,
-        reason="BinField.__set__ validates against every base that declares the "
-        "field instead of the type used on the wire, so valid values are rejected",
-    )
     def test_multiple_inheritance_conflicting_types(self):
         class Short(binmap.BinmapDataclass):
             value: b_types.unsignedshort = 0
