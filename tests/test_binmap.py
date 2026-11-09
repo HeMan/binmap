@@ -115,6 +115,38 @@ class TestTempClass:
             t.temp = -1
         assert "format requires 0 <= number <= 255" in str(excinfo)
 
+    def test_value_bounds_in_constructor(self):
+        with pytest.raises(struct.error) as excinfo:
+            Temp(temp=256)
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+    def test_wrong_type(self):
+        t = Temp()
+        with pytest.raises(struct.error) as excinfo:
+            t.temp = "10"
+        assert "required argument is not an integer" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            t.temp = 1.5
+        assert "required argument is not an integer" in str(excinfo)
+
+    def test_failed_assignment_keeps_value(self):
+        t = Temp(temp=5)
+        with pytest.raises(struct.error):
+            t.temp = 256
+        assert t.temp == 5
+        assert bytes(t) == b"\x05"
+
+    def test_wrong_length_binarydata(self):
+        with pytest.raises(struct.error) as excinfo:
+            Temp(b"\x0a\x0b")
+        assert "unpack requires a buffer of 1 bytes" in str(excinfo)
+
+        t = Temp()
+        with pytest.raises(struct.error) as excinfo:
+            t.frombytes(b"")
+        assert "unpack requires a buffer of 1 bytes" in str(excinfo)
+
     def test_compare_equal(self):
         t1 = Temp(temp=10)
         t2 = Temp(temp=10)
@@ -564,6 +596,42 @@ class TestInheritance:
         assert ch.wind == WindEnum.East
         assert ch.humidity == 37
 
+    def test_inherited_value_bounds(self):
+        class Child(Temp):
+            humidity: b_types.unsignedchar = 0
+
+        ch = Child()
+        with pytest.raises(struct.error) as excinfo:
+            ch.temp = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            Child(temp=-1)
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+    def test_multilevel_inheritance(self):
+        class Child(Temp):
+            humidity: b_types.unsignedchar = 0
+
+        class Grandchild(Child):
+            lux: b_types.unsignedshort = 0
+
+        gc = Grandchild(temp=1, humidity=2, lux=3)
+        assert bytes(gc) == b"\x01\x02\x00\x03"
+
+        with pytest.raises(struct.error) as excinfo:
+            gc.temp = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            gc.humidity = -1
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            gc.lux = 70000
+        # The upper bound is spelled differently on Python <= 3.10
+        assert "format requires 0 <= number <=" in str(excinfo)
+
 
 class AutoLength(binmap.BinmapDataclass):
     length: b_types.unsignedchar = binmap.autolength()
@@ -725,3 +793,22 @@ class TestCalculatedField:
                 )
 
         assert "Can't have more than one last" in str(excinfo)
+
+
+class TestInvalidClassDefinition:
+    def test_unsupported_type(self):
+        with pytest.raises(KeyError):
+
+            class UnsupportedType(binmap.BinmapDataclass):
+                values: list = None
+
+    def test_undefined_annotation(self):
+        # Python <= 3.13 fails while running the class body. Python 3.14+
+        # defers annotations (PEP 649), so it fails when __init_subclass__
+        # resolves them instead.
+        with pytest.raises(NameError) as excinfo:
+
+            class UndefinedAnnotation(binmap.BinmapDataclass):
+                value: Undefined = 0  # noqa: F821
+
+        assert "name 'Undefined' is not defined" in str(excinfo)
