@@ -39,7 +39,7 @@ messages, and `repr` output.
 | `docs/source/` | Sphinx docs. `index.rst` includes `README.rst`; `binmap.rst` autodocs the package. |
 | `setup.py` | setuptools packaging. There is no `pyproject.toml`. |
 | `requirements-dev.txt`, `requirements-doc.txt` | Dev and docs tools. Nothing is pinned, and there is no lockfile. |
-| `.python-version` | Pins the local dev environment to Python 3.13 for uv. |
+| `.python-version` | Pins the local dev environment to Python 3.14 for uv. It's not 3.15 because bump2version doesn't run there. |
 | `tox.ini` | Holds the flake8 and isort config as well as a tox env. |
 | `.bumpversion.cfg` | bump2version config. The version lives here and in `setup.py`. |
 | `.github/workflows/` | `pythonpackage.yml` (CI), `pythondist.yml` (publish to PyPI on tag). |
@@ -48,8 +48,10 @@ messages, and `repr` output.
 
 The dev environment is managed with [uv](https://docs.astral.sh/uv/), used as a
 venv/pip front end. There is no `uv sync` and no `uv.lock`. `uv venv` creates `.venv`
-with Python 3.13 from `.python-version`, and uv downloads that Python if it isn't
+with Python 3.14 from `.python-version`, and uv downloads that Python if it isn't
 installed. Tests import `binmap` from the repo root, so no editable install is needed.
+When the pin changes, an existing `.venv` stays on the old Python. Recreate it with
+`uv venv --clear` and reinstall the requirements.
 
 **Deactivate any other virtualenv first.** `uv pip` installs into an activated
 `VIRTUAL_ENV`, but `uv run` always uses `.venv`. With another virtualenv active, you
@@ -63,7 +65,7 @@ uv pip install -r requirements-dev.txt
 uv run pytest -v
 uv run pytest -v tests/test_binmap.py::TestAutolength         # one class
 uv run pytest -v -k calculated                                # by keyword
-uv run --isolated --python 3.9 --with pytest pytest -v        # another Python, without touching .venv
+uv run --isolated --python 3.11 --with pytest pytest -v       # another Python, without touching .venv
 
 # Type check (non-strict, package only)
 uv run mypy binmap
@@ -93,24 +95,20 @@ uv run make -C docs html
 
 ### Python versions
 
-- CI tests **3.9 through 3.13**. Code must stay 3.9-compatible. Use
-  `typing.Union`/`Optional`/`Dict`/`List` and don't write `X | Y` in annotations.
-  Annotations are evaluated at runtime through `get_type_hints`, so this matters. Don't
-  use `match` either.
-- **Python 3.14+ is currently broken**, which is why the dev environment is pinned to
-  3.13. 51 of 59 tests fail because `BinField.__set__` calls `get_type_hints(obj)` on an
-  *instance*, which 3.14 rejects (PEP 649/749). The failure surfaces as a `KeyError` from
-  `__get__`.
-  - The fix is to resolve hints on the class with `get_type_hints(type(obj))`, which also
-    walks the MRO for inherited fields.
-  - When the fix lands, add the new versions to the CI matrix and the `setup.py`
-    classifiers, and consider moving the `.python-version` pin.
-  - The `*_value_bounds`, `*_inheritance*` and `*_without_own_fields` tests in
-    `TestInheritance` check that inherited fields stay bounds-checked. A fix that skips
-    validation for them would otherwise pass every other test.
-  - The fix also changes which type is checked under multiple inheritance (see *Known
-    issues*). It should make `test_multiple_inheritance_conflicting_types` pass, so remove
-    its `xfail` marker in the same change.
+- CI tests **3.11 through 3.15**, every CPython version that isn't end-of-life. Code
+  must work on 3.11, the oldest of them.
+  - When a version reaches end-of-life (see endoflife.date), remove it from the matrix in
+    `.github/workflows/pythonpackage.yml` and from the `setup.py` classifiers.
+  - Add new releases to both places the same way.
+- **Resolve type hints on the class, never on an instance.** Python 3.14+ (PEP 649/749)
+  rejects `get_type_hints(instance)`, which is what used to break 3.14.
+  - `__init_subclass__` resolves `get_type_hints(cls)` once and stores the result on the
+    class.
+  - `BinField.__set__` reads it from there, so validation and the struct format always use
+    the same type. Reading it is also fast; resolving hints on every assignment made
+    assignments about 50x slower.
+  - The bounds tests in `TestInheritance` guard this. A change that silently skips
+    validation for inherited fields would otherwise pass every other test.
 
 ## How it works
 
@@ -153,9 +151,13 @@ Read this before touching `binmap/__init__.py`.
   corrupt the packed output.
 - **Calculated fields** store the function itself in `__dict__`. `__bytes__` calls any
   callable value it finds, and the descriptor's `__get__` calls the function.
-- **Validation happens on assignment.** `BinField.__set__` does a trial `struct.pack`, so
-  out-of-range values raise `struct.error` as soon as they're assigned, including through
-  the constructor and `frombytes`.
+- **Validation happens on assignment.** `BinField.__set__` looks up the field's type in the
+  class's stored type hints and does a trial `struct.pack`. So out-of-range values raise
+  `struct.error` as soon as they're assigned, including through the constructor and
+  `frombytes`.
+  - The trial pack uses the bare format code (native mode, no byte-order prefix), while
+    `bytes()` uses the class's prefix (standard sizes). See the `long` entry under *Known
+    issues*.
 - **The raw-bytes argument** is the `InitVar` `__binarydata`, name-mangled to
   `_BinmapDataclass__binarydata`. It is the first positional parameter, which is why
   `Cls(b"...")` parses data. Code that iterates fields skips names that start with
@@ -192,9 +194,9 @@ Read this before touching `binmap/__init__.py`.
 - Record known bugs as `@pytest.mark.xfail(raises=..., strict=True, reason=...)` tests
   instead of leaving them untested. With `strict=True`, the fix shows up as a failing
   "XPASS", so whoever fixes the bug has to remove the marker deliberately.
-- Error messages from `struct` differ between Python versions (for example the
-  `ushort` bound on 3.9/3.10). Assert only substrings that are stable across the CI
-  matrix, such as `"format requires 0 <= number <="`.
+- Error messages from `struct` differ between Python versions (for example, 3.10 and
+  older spelled out the `ushort` bound differently). Assert only substrings that are
+  stable across the CI matrix, such as `"format requires 0 <= number <="`.
 - **README examples are not executed** (there is no doctest) and have drifted. For
   example, the `TempHum` example sets `th.humidity`, but the field is called `hum`. Treat
   the tests as the spec. If you edit README examples, check them by hand, because the
@@ -219,19 +221,12 @@ Read this before touching `binmap/__init__.py`.
 
 ## Known issues
 
-These are current bugs or debt, not intended behaviour. Apart from the 3.14 fix, which is
-welcome, fix them only when asked.
+These are current bugs or debt, not intended behaviour. Fix them only when asked.
 
-- Python 3.14+ incompatibility (see *Python versions* above).
-- Under multiple inheritance, `BinField.__set__` checks a value against *every* direct
-  base that declares the field, not just the type used on the wire.
-  - In `class C(A, B)` where `A.x` is an `unsignedshort` and `B.x` an `unsignedchar`, `x`
-    is packed as `H`, but `C(x=300)` and even parsing `C`'s own valid bytes raise
-    `struct.error`.
-  - This only happens when `C` declares fields of its own. Without them, the instance
-    finds `A`'s annotations directly.
-  - It's recorded as the strict-xfail test
-    `TestInheritance::test_multiple_inheritance_conflicting_types`.
+- `long` and `unsignedlong` fields can accept out-of-range values. Assignment validates
+  with native sizes (8 bytes on 64-bit Linux and macOS), but `bytes()` packs with standard
+  sizes (4 bytes). So `obj.v = 2**40` is accepted and `bytes(obj)` then raises
+  `struct.error`.
 - `dataclasses.asdict()` and `astuple()` raise `AttributeError` on classes with padding
   fields, because `PaddingField.__get__` raises. See the `TODO` in
   `TestPadClass.test_create_pad`.
@@ -240,9 +235,9 @@ welcome, fix them only when asked.
   truncates.
 - `.readthedocs.yml` uses the deprecated `python.version: 3.7` form, and Read the Docs
   now requires a `build:` section.
-- `setup.py` still lists the Python 3.8 classifier although CI dropped 3.8, and it sets no
-  `python_requires`. Because `find_packages()` also picks up `tests/`, a top-level `tests`
-  package gets installed.
+- `setup.py` sets no `python_requires`, so pip still installs binmap on Python 3.10 and
+  older, which CI no longer tests. Because `find_packages()` also picks up `tests/`, a
+  top-level `tests` package gets installed.
 - `make -C docs html` writes to `docs/build/`, but `.gitignore` only ignores
   `docs/_build/`. Don't commit build output.
 - `docs/source/conf.py` points `html_static_path` at a `_static` directory that doesn't
@@ -262,8 +257,9 @@ welcome, fix them only when asked.
   tags.
   - The version lives in `setup.py` and `.bumpversion.cfg`. There is no `__version__`.
   - `uv run bump2version patch|minor|major` updates both files, commits
-    `Bump version: X → Y` and tags `vX.Y.Z`. It works on the pinned 3.13, but
-    bump2version is unmaintained and does not run on Python 3.15+.
+    `Bump version: X → Y` and tags `vX.Y.Z`. It works on the pinned 3.14, with a
+    `DeprecationWarning`. bump2version is unmaintained and does not run on Python 3.15+,
+    which is why the pin isn't 3.15.
   - **Pushing any tag** triggers `pythondist.yml`, which builds an sdist only
     (`python setup.py sdist`, with setup-python rather than uv) and uploads it to PyPI
     using the `pypi` repo secret.
