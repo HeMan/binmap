@@ -215,7 +215,8 @@ class TestUnknownAttributes:
         with pytest.raises(AttributeError) as excinfo:
             th.hum = 40
         assert "TempHum has no field 'hum'" in str(excinfo)
-        # name and obj let Python suggest "Did you mean: 'humidity'?"
+        # name and obj let Python suggest similar fields for typos, e.g.
+        # "humidty" -> "Did you mean: 'humidity'?"
         assert excinfo.value.name == "hum"
         assert excinfo.value.obj is th
         assert not hasattr(th, "hum")
