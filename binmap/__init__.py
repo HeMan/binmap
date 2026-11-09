@@ -27,19 +27,13 @@ class BinField(BaseDescriptor):
         return obj.__dict__[self.name]
 
     def __set__(self, obj, value):
-        type_hints = get_type_hints(obj)
-        if self.name in type_hints:
-            struct.pack(datatypemapping[type_hints[self.name]][1], value)
-        else:
-            found = False
-            for base in type(obj).__bases__:
-                type_hints = get_type_hints(base)
-                if self.name in type_hints:
-                    struct.pack(datatypemapping[type_hints[self.name]][1], value)
-                    found = True
-
-            if not found:
-                raise ValueError(self.name)
+        # Resolve hints on the class, not the instance: Python 3.14+ (PEP 649)
+        # rejects instances, and the class lookup walks the MRO so inherited
+        # fields are found as well.
+        type_hints = get_type_hints(type(obj))
+        if self.name not in type_hints:
+            raise ValueError(self.name)
+        struct.pack(datatypemapping[type_hints[self.name]][1], value)
         obj.__dict__[self.name] = value
 
 
