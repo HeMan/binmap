@@ -105,8 +105,12 @@ uv run make -C docs html
     walks the MRO for inherited fields.
   - When the fix lands, add the new versions to the CI matrix and the `setup.py`
     classifiers, and consider moving the `.python-version` pin.
-  - Make sure inherited fields stay bounds-checked: no existing test assigns an invalid
-    value to an inherited field.
+  - The `*_value_bounds`, `*_inheritance*` and `*_without_own_fields` tests in
+    `TestInheritance` check that inherited fields stay bounds-checked. A fix that skips
+    validation for them would otherwise pass every other test.
+  - The fix also changes which type is checked under multiple inheritance (see *Known
+    issues*). It should make `test_multiple_inheritance_conflicting_types` pass, so remove
+    its `xfail` marker in the same change.
 
 ## How it works
 
@@ -122,6 +126,10 @@ Read this before touching `binmap/__init__.py`.
   metadata, installs that descriptor as a class attribute, and appends the struct code to
   a per-class format string.
   - **Declaration order is wire order**, and parent-class fields come first.
+  - With multiple inheritance, dataclasses collect fields in reverse MRO order. So
+    `class C(A, B)` puts B's fields first, then A's, then C's. A field declared in several
+    bases gets its *position* from the last of those bases in the MRO, but its *type*
+    from the first.
   - The one exception is `calculatedfield(..., last=True)`, which is moved to the end.
     Only one `last` field is allowed per class hierarchy.
 - **Field kinds come from metadata keys**, which the factory functions set:
@@ -178,7 +186,15 @@ Read this before touching `binmap/__init__.py`.
 - For every behaviour change, test both directions: packing with `bytes(obj)` and parsing
   with `Cls(b"...")`. Add an inheritance case when the change touches field collection,
   ordering or type lookup. Include negative cases (invalid values must still raise),
-  because the existing suite mostly checks valid input.
+  because a validation regression is invisible to tests that only use valid input.
+  Existing examples are `TestTempClass::test_value_bounds*`/`test_wrong_*`, the
+  inheritance tests in `TestInheritance`, and `TestInvalidClassDefinition`.
+- Record known bugs as `@pytest.mark.xfail(raises=..., strict=True, reason=...)` tests
+  instead of leaving them untested. With `strict=True`, the fix shows up as a failing
+  "XPASS", so whoever fixes the bug has to remove the marker deliberately.
+- Error messages from `struct` differ between Python versions (for example the
+  `ushort` bound on 3.9/3.10). Assert only substrings that are stable across the CI
+  matrix, such as `"format requires 0 <= number <="`.
 - **README examples are not executed** (there is no doctest) and have drifted. For
   example, the `TempHum` example sets `th.humidity`, but the field is called `hum`. Treat
   the tests as the spec. If you edit README examples, check them by hand, because the
@@ -207,6 +223,15 @@ These are current bugs or debt, not intended behaviour. Apart from the 3.14 fix,
 welcome, fix them only when asked.
 
 - Python 3.14+ incompatibility (see *Python versions* above).
+- Under multiple inheritance, `BinField.__set__` checks a value against *every* direct
+  base that declares the field, not just the type used on the wire.
+  - In `class C(A, B)` where `A.x` is an `unsignedshort` and `B.x` an `unsignedchar`, `x`
+    is packed as `H`, but `C(x=300)` and even parsing `C`'s own valid bytes raise
+    `struct.error`.
+  - This only happens when `C` declares fields of its own. Without them, the instance
+    finds `A`'s annotations directly.
+  - It's recorded as the strict-xfail test
+    `TestInheritance::test_multiple_inheritance_conflicting_types`.
 - `dataclasses.asdict()` and `astuple()` raise `AttributeError` on classes with padding
   fields, because `PaddingField.__get__` raises. See the `TODO` in
   `TestPadClass.test_create_pad`.

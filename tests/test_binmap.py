@@ -632,6 +632,94 @@ class TestInheritance:
         # The upper bound is spelled differently on Python <= 3.10
         assert "format requires 0 <= number <=" in str(excinfo)
 
+    def test_subclass_without_own_fields(self):
+        class Sub(Temp):
+            pass
+
+        s = Sub(temp=10)
+        assert bytes(s) == b"\x0a"
+        assert Sub(b"\x14").temp == 20
+
+        with pytest.raises(struct.error) as excinfo:
+            s.temp = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+    def test_redeclared_field_uses_child_type(self):
+        class Wider(Temp):
+            temp: b_types.unsignedshort = 0
+
+        w = Wider(temp=300)
+        assert bytes(w) == b"\x01\x2c"
+        assert Wider(b"\x01\x2c").temp == 300
+
+        with pytest.raises(struct.error) as excinfo:
+            w.temp = 70000
+        assert "format requires 0 <= number <=" in str(excinfo)
+
+    def test_multiple_inheritance(self):
+        class First(binmap.BinmapDataclass):
+            first: b_types.unsignedchar = 0
+
+        class Second(binmap.BinmapDataclass):
+            second: b_types.unsignedshort = 0
+
+        class Both(First, Second):
+            own: b_types.unsignedchar = 0
+
+        # dataclasses collect fields in reverse MRO order, so the last base's
+        # fields come first on the wire.
+        b = Both(first=1, second=2, own=3)
+        assert bytes(b) == b"\x00\x02\x01\x03"
+        assert astuple(Both(b"\x00\x02\x01\x03")) == (2, 1, 3)
+
+        with pytest.raises(struct.error) as excinfo:
+            b.first = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            b.second = 70000
+        assert "format requires 0 <= number <=" in str(excinfo)
+
+    def test_multiple_inheritance_conflicting_types_without_own_fields(self):
+        class Short(binmap.BinmapDataclass):
+            value: b_types.unsignedshort = 0
+
+        class Char(binmap.BinmapDataclass):
+            value: b_types.unsignedchar = 0
+
+        class Both(Short, Char):
+            pass
+
+        # Short comes first in the MRO, so value is an unsignedshort
+        b = Both(value=300)
+        assert bytes(b) == b"\x01\x2c"
+        assert Both(b"\x01\x2c").value == 300
+
+        with pytest.raises(struct.error) as excinfo:
+            b.value = 70000
+        assert "format requires 0 <= number <=" in str(excinfo)
+
+    @pytest.mark.xfail(
+        raises=struct.error,
+        strict=True,
+        reason="BinField.__set__ validates against every base that declares the "
+        "field instead of the type used on the wire, so valid values are rejected",
+    )
+    def test_multiple_inheritance_conflicting_types(self):
+        class Short(binmap.BinmapDataclass):
+            value: b_types.unsignedshort = 0
+
+        class Char(binmap.BinmapDataclass):
+            value: b_types.unsignedchar = 0
+
+        class Both(Short, Char):
+            own: b_types.unsignedchar = 0
+
+        # Short comes first in the MRO, so value is an unsignedshort
+        b = Both(value=300, own=1)
+        assert bytes(b) == b"\x01\x2c\x01"
+        assert Both(b"\x01\x2c\x01").value == 300
+
 
 class AutoLength(binmap.BinmapDataclass):
     length: b_types.unsignedchar = binmap.autolength()
