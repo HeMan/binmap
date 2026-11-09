@@ -361,20 +361,36 @@ class BinmapDataclass:
 
     def frombytes(self, value: bytes):
         """
-        Unpacks value to each field
+        Unpacks value to each field. If the data is rejected, the instance is
+        left unchanged.
+
         :param bytes value: binary string to unpack
+        :raises ValueError: if a constant, autolength or calculated field
+          doesn't match the data
         """
         args = struct.unpack(self.__formatstring, value)
-        # strict: the struct has exactly one value per data field
-        for arg, name in zip(args, self.__datafields, strict=True):
-            if "constant" in self.__datafieldsmap[name].metadata:
-                if arg != self.__datafieldsmap[name].default:
-                    raise ValueError("Constant doesn't match binary data")
-            elif "autolength" in self.__datafieldsmap[name].metadata:
-                if arg != getattr(self, name):
-                    raise ValueError("Length doesn't match")
-            elif "function" in self.__datafieldsmap[name].metadata:
-                if arg != self.__datafieldsmap[name].metadata["function"](self):
+        previous = self.__dict__.copy()
+        try:
+            calculated = []
+            # strict: the struct has exactly one value per data field
+            for arg, name in zip(args, self.__datafields, strict=True):
+                field_ = self.__datafieldsmap[name]
+                if "constant" in field_.metadata:
+                    if arg != field_.default:
+                        raise ValueError("Constant doesn't match binary data")
+                elif "autolength" in field_.metadata:
+                    if arg != getattr(self, name):
+                        raise ValueError("Length doesn't match")
+                elif "function" in field_.metadata:
+                    # Checked once every other field is assigned: the function
+                    # may read fields that come after it in the struct.
+                    calculated.append((arg, field_.metadata["function"]))
+                else:
+                    setattr(self, name, arg)
+            for arg, function in calculated:
+                if arg != function(self):
                     raise ValueError("Wrong calculated value")
-            else:
-                setattr(self, name, arg)
+        except Exception:
+            self.__dict__.clear()
+            self.__dict__.update(previous)
+            raise
