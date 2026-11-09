@@ -912,6 +912,17 @@ class CalculatedFieldLast(binmap.BinmapDataclass):
     hum: b_types.unsignedchar = 0
 
 
+class CalculatedFieldMiddle(binmap.BinmapDataclass):
+    temp: b_types.signedchar = 0
+
+    def chk(self) -> b_types.unsignedchar:
+        return (self.temp + self.hum) & 0xFF
+
+    # Packed between temp and hum, but reads hum too
+    checksum: b_types.unsignedchar = binmap.calculatedfield(chk)
+    hum: b_types.unsignedchar = 0
+
+
 class TestCalculatedField:
     def test_calculated_field(self):
         cf = CalculatedField()
@@ -982,6 +993,26 @@ class TestCalculatedField:
         with pytest.raises(ValueError) as excinfo:
             CalculatedFieldLast(b"\x0a\x0a\x63")
         assert "Wrong calculated value" in str(excinfo)
+
+    def test_calculated_field_middle_binary(self):
+        cfm = CalculatedFieldMiddle(b"\x0a\x1e\x14")
+        assert (cfm.temp, cfm.checksum, cfm.hum) == (10, 30, 20)
+        assert bytes(cfm) == b"\x0a\x1e\x14"
+
+    def test_calculated_field_middle_wrong_checksum(self):
+        # The checksum byte (0x0a) only matches if hum is still 0, so checking
+        # it before hum (0x63) is set would accept this corrupt data.
+        with pytest.raises(ValueError) as excinfo:
+            CalculatedFieldMiddle(b"\x0a\x0a\x63")
+        assert "Wrong calculated value" in str(excinfo)
+
+    def test_failed_frombytes_keeps_values(self):
+        cf = CalculatedField(temp=-27, hum=10)
+        with pytest.raises(ValueError) as excinfo:
+            cf.frombytes(b"\x01\x02\x00")  # checksum should be 0x03
+        assert "Wrong calculated value" in str(excinfo)
+        assert (cf.temp, cf.hum, cf.checksum) == (-27, 10, 239)
+        assert bytes(cf) == b"\xe5\x0a\xef"
 
     def test_calculated_field_multi_last(self):
         with pytest.raises(ValueError) as excinfo:
