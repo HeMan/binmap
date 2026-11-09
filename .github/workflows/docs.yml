@@ -39,8 +39,9 @@ jobs:
     - name: Build documentation
       env:
         DOCS_BRANCH: ${{ github.ref_name }}
+      # -d keeps Sphinx's build cache (.doctrees) out of the published site
       run: |
-        sphinx-build -W --keep-going -b html docs/source _site
+        sphinx-build -W --keep-going -b html -d "$RUNNER_TEMP/doctrees" docs/source _site
     - name: Publish to gh-pages
       env:
         BRANCH: ${{ github.ref_name }}
