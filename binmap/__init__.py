@@ -41,10 +41,15 @@ class BinField(BaseDescriptor):
         # get_type_hints(cls). Never resolve them on the instance: Python 3.14+
         # (PEP 649) rejects that. The class lookup walks the MRO, so inherited
         # fields are found too.
-        type_hints = type(obj)._BinmapDataclass__typehints
+        cls = type(obj)
+        type_hints = cls._BinmapDataclass__typehints
         if self.name not in type_hints:
             raise ValueError(self.name)
-        struct.pack(datatypemapping[type_hints[self.name]][1], value)
+        # Pack with the class's byte order, like bytes() does. A bare code would
+        # use native sizes, which differ from the standard ones (e.g. "l" is 8
+        # bytes natively on 64-bit Linux but 4 bytes with ">" or "<").
+        code = datatypemapping[type_hints[self.name]][1]
+        struct.pack(cls._BinmapDataclass__byteorder + code, value)
         obj.__dict__[self.name] = value
 
 
@@ -231,6 +236,7 @@ class BinmapDataclass:
     __datafields: ClassVar[Tuple[str, ...]]
     __datafieldsmap: ClassVar[Dict[str, dataclasses.Field]]
     __formatstring: ClassVar[str]
+    __byteorder: ClassVar[str]
     __typehints: ClassVar[Dict[str, type]]
     __fieldnames: ClassVar[FrozenSet[str]] = frozenset()
 
@@ -249,6 +255,7 @@ class BinmapDataclass:
 
         cls.__fieldnames = frozenset(f.name for f in dataclasses.fields(cls))
         cls.__typehints = type_hints
+        cls.__byteorder = byteorder
         cls.__formatstring = byteorder
         cls.__datafieldsmap = {f.name: f for f in dataclasses.fields(cls)}
         # Names of the fields that have a value in the struct (everything but
