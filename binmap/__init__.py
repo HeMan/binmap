@@ -53,6 +53,25 @@ class BinField(BaseDescriptor):
         obj.__dict__[self.name] = value
 
 
+class StringField(BinField):
+    """StringField descriptor is a BinField for string and pascalstring fields
+    that also rejects values longer than the field holds, which struct.pack
+    would otherwise cut silently.
+
+    :raises struct.error: when the value is too long"""
+
+    def __init__(self, name, maxlength):
+        super().__init__(name)
+        self.maxlength = maxlength
+
+    def __set__(self, obj, value):
+        if isinstance(value, (bytes, bytearray)) and len(value) > self.maxlength:
+            raise struct.error(
+                f"{self.name} holds at most {self.maxlength} bytes, got {len(value)}"
+            )
+        super().__set__(obj, value)
+
+
 class PaddingField(BaseDescriptor):
     """PaddingField descriptor is used to "pad" data with values unused for real data
 
@@ -134,6 +153,10 @@ datatypemapping: Dict[type, Tuple[Type[BaseDescriptor], str]] = {
     b_types.pad: (PaddingField, "x"),
 }
 
+# Type hints for fixed-length byte strings, which take their length from
+# stringfield() and use StringField to reject values that don't fit.
+STRING_TYPES = (b_types.string, b_types.pascalstring, str)
+
 
 def padding(length: int = 1) -> dataclasses.Field:
     """
@@ -168,16 +191,19 @@ def autolength(offset: int = 0) -> dataclasses.Field:
 
 def stringfield(length: int = 1, default: bytes = b"") -> dataclasses.Field:
     """
-    Field generator function for string fields.
+    Field generator function for string and pascalstring fields.
 
-    :param int lenght: lengt of the string.
-    :param bytes default: default value of the string
-    :param bytes fillchar: char to pad the string with
+    :param int length: size of the field in bytes. A pascalstring uses one of
+      them for its length, so it holds at most ``length - 1`` bytes (and never
+      more than 255).
+    :param bytes default: default value. Left out (or ``b""``), a string
+      defaults to ``length`` zero bytes and a pascalstring to ``b""``.
     :return: dataclass field
     """
-    if default == b"":
+    autodefault = default == b""
+    if autodefault:
         default = b"\x00" * length
-    return dataclasses.field(default=default, metadata={"length": length})  # type: ignore
+    return dataclasses.field(default=default, metadata={"length": length, "autodefault": autodefault})  # type: ignore
 
 
 def enumfield(
@@ -245,6 +271,18 @@ class BinmapDataclass:
         Subclass initiator. This makes the inheriting class a dataclass.
         :param str byteorder: byteorder for binary data
         """
+        # stringfield() can't tell a string from a pascalstring, so it fills an
+        # unspecified default with `length` zero bytes. A pascalstring holds one
+        # byte less, so start it empty instead, before dataclass() captures the
+        # defaults.
+        own_hints = get_type_hints(cls)
+        for name, value in vars(cls).items():
+            if (
+                isinstance(value, dataclasses.Field)
+                and value.metadata.get("autodefault")
+                and own_hints.get(name) is b_types.pascalstring
+            ):
+                value.default = b""
         dataclasses.dataclass(cls)
         setattr(
             cls,
@@ -277,10 +315,21 @@ class BinmapDataclass:
                 _base = ConstField
             elif "function" in field_.metadata:
                 _base = partial(CalculatedField, function=field_.metadata["function"])  # type: ignore
+            elif type_hints[field_.name] in STRING_TYPES:
+                length = field_.metadata["length"]
+                # A pascal string spends one byte on its length, which can't
+                # count past 255.
+                maxlength = length if _type == "s" else min(length - 1, 255)
+                if len(field_.default) > maxlength:  # type: ignore
+                    raise ValueError(
+                        f"Default for {field_.name} is {len(field_.default)} bytes, "  # type: ignore
+                        f"but it holds at most {maxlength}"
+                    )
+                _base = partial(StringField, maxlength=maxlength)  # type: ignore
             setattr(cls, field_.name, _base(name=field_.name))
             if type_hints[field_.name] is b_types.pad:
                 _type = field_.default * _type  # type: ignore
-            if type_hints[field_.name] in (b_types.string, b_types.pascalstring, str):
+            if type_hints[field_.name] in STRING_TYPES:
                 _type = str(field_.metadata["length"]) + _type
             if "last" in field_.metadata and field_.metadata["last"]:
                 if lastfield != "":

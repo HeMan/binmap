@@ -163,7 +163,7 @@ Read this before touching `binmap/__init__.py`.
   | `autolength` | `"autolength"` | `ConstField` |
   | `calculatedfield` | `"function"`, `"last"` | `CalculatedField` |
   | `enumfield` | `"enum"` | `EnumField` |
-  | `stringfield` | `"length"` | `BinField` |
+  | `stringfield` | `"length"`, `"autodefault"` | `StringField` |
 
   A new field kind follows the same pattern. Write a factory that returns
   `dataclasses.field(..., metadata={...})`, then handle it in `__init_subclass__`,
@@ -207,8 +207,16 @@ Read this before touching `binmap/__init__.py`.
     function may read fields that come later in the struct.
   - It's all-or-nothing: on any error, including an invalid enum value, the instance's
     `__dict__` is restored and the exception re-raised. Keep it that way.
-- **Strings are `bytes`.** `string` and `pascalstring` values are `bytes` even though
-  their `NewType` base is `str`. The length comes from `stringfield(length)`.
+- **Strings are `bytes`.** `string` and `pascalstring` (`NewType`s of `bytes`) and plain
+  `str` annotations (`STRING_TYPES`) take their size from `stringfield(length)`.
+  - They use `StringField`, which rejects values longer than the field holds with
+    `struct.error`; `struct` itself would cut them silently. A `string` holds `length`
+    bytes, a `pascalstring` `length - 1`, never more than 255.
+  - A default that doesn't fit raises `ValueError` when the class is defined.
+  - `stringfield()` can't tell the two types apart, so it marks an unspecified default
+    (`"autodefault"` metadata) as `length` zero bytes. `__init_subclass__` switches it to
+    `b""` for a `pascalstring` *before* calling `dataclasses.dataclass()`, which is when
+    defaults are captured.
 - **Padding.** The field's default is its byte count. Reading it raises `AttributeError`
   and writing it is a no-op.
   - It's `repr=False` and `compare=False`, so the generated `__repr__` and `__eq__` never
@@ -282,9 +290,6 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   `asdict()` and `astuple()` leave it out. So zipping `fields(SomeClass)` with
   `astuple(obj)` silently misaligns the values, and code that walks the class's fields and
   reads each one from an instance still raises.
-- `string` and `pascalstring` fields accept values longer than the field. Validation
-  packs with a bare `s`, which is one byte, so `bytes()` silently cuts the value to fit
-  while the attribute keeps the full value.
 
 ## Git, CI and releases
 

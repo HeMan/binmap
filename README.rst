@@ -61,8 +61,9 @@ typehinted datatype it will be added to the binary output from the class.
 Strings
 -------
 `string` and `pascalstring` fields have a fixed length in bytes, set with
-`stringfield(length)`. Their values are `bytes`, not `str`. The default is `length`
-zero bytes; `stringfield(length, default=b"...")` sets another one.
+`stringfield(length)`. Their values are `bytes`, not `str`. By default a `string` is
+`length` zero bytes and a `pascalstring` is empty; `stringfield(length, default=b"...")`
+sets another default.
 
 A `string` is padded with zero bytes to its length, and keeps them when parsed:
 
@@ -77,7 +78,7 @@ A `string` is padded with zero bytes to its length, and keeps them when parsed:
    b'hello\x00\x00\x00'
 
 A `pascalstring` stores the string's length in its first byte, so it holds at most
-`length - 1` bytes, and parsing returns just the string:
+`length - 1` bytes (and never more than 255), and parsing returns just the string:
 
 .. code-block:: python
 
@@ -89,7 +90,14 @@ A `pascalstring` stores the string's length in its first byte, so it holds at mo
    >>> print(PascalNamed(b"\x06binmap\x00").name)
    b'binmap'
 
-A value longer than the field is cut to fit when packed.
+A value longer than the field holds is rejected, instead of being cut:
+
+.. code-block:: python
+
+   >>> Named(name=b"much too long")
+   Traceback (most recent call last):
+   ...
+   struct.error: name holds at most 8 bytes, got 13
 
 
 Padding
