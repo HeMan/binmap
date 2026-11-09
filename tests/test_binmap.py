@@ -1,3 +1,5 @@
+import copy
+import pickle
 import struct
 from dataclasses import asdict, astuple, fields, replace
 from enum import IntEnum, IntFlag
@@ -205,6 +207,69 @@ class TestTempHumClass:
         assert th1 != th4
         assert th2 != th3
         assert th2 != th4
+
+
+class TestUnknownAttributes:
+    def test_assign_unknown_attribute(self):
+        th = TempHum(temp=10, humidity=60)
+        with pytest.raises(AttributeError) as excinfo:
+            th.hum = 40
+        assert "TempHum has no field 'hum'" in str(excinfo)
+        # name and obj let Python suggest similar fields for typos, e.g.
+        # "humidty" -> "Did you mean: 'humidity'?"
+        assert excinfo.value.name == "hum"
+        assert excinfo.value.obj is th
+        assert not hasattr(th, "hum")
+        assert bytes(th) == b"\x0a\x3c"
+
+    def test_assign_unknown_attribute_baseclass(self):
+        b = binmap.BinmapDataclass()
+        with pytest.raises(AttributeError) as excinfo:
+            b.temp = 10
+        assert "BinmapDataclass has no field 'temp'" in str(excinfo)
+
+    def test_assign_unknown_attribute_inherited(self):
+        class Child(Temp):
+            humidity: b_types.unsignedchar = 0
+
+        ch = Child()
+        ch.temp = 10
+        ch.humidity = 60
+        with pytest.raises(AttributeError) as excinfo:
+            ch.hum = 40
+        assert "Child has no field 'hum'" in str(excinfo)
+        assert bytes(ch) == b"\x0a\x3c"
+
+    def test_assign_padding_is_ignored(self):
+        p = Pad(temp=10, humidity=60)
+        p.pad = 5
+        assert bytes(p) == b"\x0a\x00\x00\x3c"
+
+    def test_property_setter(self):
+        class Celsius(binmap.BinmapDataclass):
+            raw: b_types.short = 0
+
+            @property
+            def celsius(self):
+                return self.raw / 10
+
+            @celsius.setter
+            def celsius(self, value):
+                self.raw = round(value * 10)
+
+        c = Celsius()
+        c.celsius = 21.5
+        assert c.raw == 215
+        assert bytes(c) == b"\x00\xd7"
+
+    def test_copy_and_pickle(self):
+        th = TempHum(temp=10, humidity=60)
+        for clone in (copy.copy(th), copy.deepcopy(th), pickle.loads(pickle.dumps(th))):
+            assert clone == th
+            assert bytes(clone) == b"\x0a\x3c"
+            clone.temp = 11
+            with pytest.raises(AttributeError):
+                clone.hum = 40
 
 
 class Strings(binmap.BinmapDataclass):

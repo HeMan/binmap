@@ -2,7 +2,17 @@ import dataclasses
 import struct
 from enum import IntEnum, IntFlag
 from functools import partial
-from typing import Callable, ClassVar, Dict, List, Tuple, Type, Union, get_type_hints
+from typing import (
+    Callable,
+    ClassVar,
+    Dict,
+    FrozenSet,
+    List,
+    Tuple,
+    Type,
+    Union,
+    get_type_hints,
+)
 
 from binmap import types as b_types
 
@@ -222,6 +232,7 @@ class BinmapDataclass:
     __datafieldsmap: ClassVar[Dict]
     __formatstring: ClassVar[str]
     __typehints: ClassVar[Dict[str, type]]
+    __fieldnames: ClassVar[FrozenSet[str]] = frozenset()
 
     def __init_subclass__(cls, byteorder: str = ">"):
         """
@@ -236,6 +247,7 @@ class BinmapDataclass:
         )
         type_hints = get_type_hints(cls)
 
+        cls.__fieldnames = frozenset(f.name for f in dataclasses.fields(cls))
         cls.__typehints = type_hints
         cls.__formatstring = byteorder
         cls.__datafieldsmap = {}
@@ -266,6 +278,22 @@ class BinmapDataclass:
             else:
                 cls.__formatstring += _type
         cls.__formatstring += lastfield
+
+    def __setattr__(self, name, value):
+        """
+        Only fields, and class attributes that handle assignment themselves
+        (such as properties), can be assigned.
+
+        :raises AttributeError: for any other name, so a typo can't silently add
+          an attribute that ``bytes()`` later fails on.
+        """
+        if name not in self.__fieldnames and not hasattr(
+            getattr(type(self), name, None), "__set__"
+        ):
+            raise AttributeError(
+                f"{type(self).__name__} has no field {name!r}", name=name, obj=self
+            )
+        super().__setattr__(name, value)
 
     def __bytes__(self):
         """

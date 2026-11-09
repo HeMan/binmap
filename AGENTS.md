@@ -158,6 +158,15 @@ Read this before touching `binmap/__init__.py`.
   re-inserts each key so that this order matches field order (the "kludgy hack" comment).
   Anything that adds instance attributes, or changes when keys are inserted, can silently
   corrupt the packed output.
+- **Only fields can be assigned.** `BinmapDataclass.__setattr__` raises `AttributeError`
+  (with `name` and `obj` set, so Python suggests similar fields) for any name that isn't
+  a field.
+  - Class attributes that handle assignment themselves, such as properties, are still
+    allowed.
+  - The set of field names is computed once per class in `__init_subclass__`; padding is
+    included, so assigning to it stays a silent no-op.
+  - Internal code that writes `obj.__dict__` directly bypasses the guard, so it must only
+    ever add field names. So do `copy` and `pickle`.
 - **Calculated fields** store the function itself in `__dict__`. `__bytes__` calls any
   callable value it finds, and the descriptor's `__get__` calls the function.
 - **Validation happens on assignment.** `BinField.__set__` looks up the field's type in the
@@ -217,9 +226,10 @@ Read this before touching `binmap/__init__.py`.
   older spelled out the `ushort` bound differently). Assert only substrings that are
   stable across the CI matrix, such as `"format requires 0 <= number <="`.
 - **README examples are not executed** (there is no doctest) and have drifted. For
-  example, the `TempHum` example sets `th.humidity`, but the field is called `hum`. Treat
-  the tests as the spec. If you edit README examples, check them by hand, because the
-  README is also the PyPI long description and the docs landing page.
+  example, the Enums example expects `print(w.direction)` to show `<WindEnum.West: 3>`,
+  but Python 3.11+ prints `3`. Treat the tests as the spec. If you edit README examples,
+  check them by hand, because the README is also the PyPI long description and the docs
+  landing page.
 
 ## Code style
 

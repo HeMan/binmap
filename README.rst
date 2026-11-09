@@ -29,15 +29,23 @@ one unsiged byte for humidity:
    ...
    >>> th = TempHum()
    >>> th.temp = -10
-   >>> th.humidity = 60
+   >>> th.hum = 60
    >>> print(bytes(th))
-   b'\xfc<'
+   b'\xf6<'
 
    >>> th2 = TempHum(b'\xea\x41')
    >>> print(th2.temp)
    -22
    >>> print(th2.hum)
    65
+
+Only fields can be assigned, so a misspelled name fails right away instead of
+being silently added:
+
+.. code-block:: python
+
+   >>> th.humidity = 60
+   AttributeError: TempHum has no field 'humidity'
 
 
 
