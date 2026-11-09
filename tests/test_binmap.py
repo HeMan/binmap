@@ -962,6 +962,27 @@ class TestCalculatedField:
             CalculatedFieldLastInherit(b"\x0b\x20\x00\x00\x01\x30\x00")
         assert "Wrong calculated value" in str(excinfo)
 
+    def test_calculated_field_last_binary(self):
+        # checksum is declared before hum but packed after it
+        cfl = CalculatedFieldLast(b"\x0a\x14\x1e")
+        assert (cfl.temp, cfl.hum, cfl.checksum) == (10, 20, 30)
+        assert bytes(cfl) == b"\x0a\x14\x1e"
+
+    def test_calculated_field_last_inherit_binary(self):
+        class CalculatedFieldLastInherit(CalculatedFieldLast):
+            lux: b_types.unsignedinteger = 0
+
+        c = CalculatedFieldLastInherit(b"\x0a\x14\x00\x00\x01\x91\xaf")
+        assert (c.temp, c.hum, c.lux, c.checksum) == (10, 20, 401, 0xAF)
+
+    def test_calculated_field_last_wrong_checksum(self):
+        # The checksum byte (0x63) is wrong. The hum byte (0x0a) happens to
+        # equal the checksum of the fields before it, so comparing the checksum
+        # against the wrong byte would accept this corrupt data.
+        with pytest.raises(ValueError) as excinfo:
+            CalculatedFieldLast(b"\x0a\x0a\x63")
+        assert "Wrong calculated value" in str(excinfo)
+
     def test_calculated_field_multi_last(self):
         with pytest.raises(ValueError) as excinfo:
 
@@ -1007,3 +1028,42 @@ class TestInvalidClassDefinition:
                 value: Undefined = 0  # noqa: F821
 
         assert "name 'Undefined' is not defined" in str(excinfo)
+
+
+class TestClassBookkeeping:
+    def test_instantiation_does_not_change_class_state(self):
+        class Fresh(binmap.BinmapDataclass):
+            temp: b_types.unsignedchar = 0
+            hum: b_types.unsignedchar = 0
+
+        def class_state():
+            # binmap's per-class bookkeeping lives in name-mangled attributes.
+            # Copy mutable values so later changes to them show up.
+            return {
+                name: value.copy() if hasattr(value, "copy") else value
+                for name, value in vars(Fresh).items()
+                if name.startswith("_BinmapDataclass__")
+            }
+
+        before = class_state()
+        assert before  # guard against the attribute prefix changing
+        for _ in range(3):
+            Fresh()
+            Fresh(b"\x01\x02")
+        assert class_state() == before
+
+    def test_parse_after_many_instances(self):
+        for _ in range(1000):
+            TempHum()
+        th = TempHum(b"\x0a\x3c")
+        assert (th.temp, th.humidity) == (10, 60)
+
+    def test_parent_and_child_parse_independently(self):
+        class Child(TempHum):
+            lux: b_types.unsignedshort = 0
+
+        for _ in range(3):
+            TempHum()
+            Child()
+        assert astuple(TempHum(b"\x0a\x3c")) == (10, 60)
+        assert astuple(Child(b"\x0a\x3c\x01\x90")) == (10, 60, 400)

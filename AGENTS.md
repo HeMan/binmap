@@ -139,6 +139,16 @@ Read this before touching `binmap/__init__.py`.
     from the first.
   - The one exception is `calculatedfield(..., last=True)`, which is moved to the end.
     Only one `last` field is allowed per class hierarchy.
+- **Per-class bookkeeping is built once, in `__init_subclass__`, and instances never
+  change it.** The same loop that builds the format string records:
+  - `__datafields`: the names of the fields with a value in the struct, i.e. everything
+    except padding, in wire order (the `last` field at the end). It's a tuple.
+  - `__datafieldsmap`: field name → `dataclasses.Field`.
+
+  `frombytes` pairs the unpacked values with `__datafields` using
+  `zip(..., strict=True)`. Keep anything derived from the class definition out of
+  `__post_init__`. `TestClassBookkeeping::test_instantiation_does_not_change_class_state`
+  checks this.
 - **Field kinds come from metadata keys**, which the factory functions set:
 
   | Factory | Metadata key | Descriptor |
@@ -260,9 +270,13 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   `asdict()` and `astuple()` leave it out. So zipping `fields(SomeClass)` with
   `astuple(obj)` silently misaligns the values, and code that walks the class's fields and
   reads each one from an instance still raises.
-- `__datafields` is a class-level list, but `__post_init__` appends to it on every
-  instantiation, so it grows without bound. `frombytes` only works because `zip()`
-  truncates.
+- A `calculatedfield` that isn't `last` can't parse its own bytes if fields it reads are
+  declared after it.
+  - `frombytes` checks each calculated value as soon as it reaches it, before the later
+    fields are set, so the function sees their defaults.
+  - Declare calculated fields after the fields they read, or use `last=True`.
+  - The fix is to assign every plain field first and check constants, autolength and
+    calculated fields afterwards.
 - `.readthedocs.yml` uses the deprecated `python.version: 3.7` form, and Read the Docs
   now requires a `build:` section.
 - `find_packages()` in `setup.py` also picks up `tests/`, so a top-level `tests` package

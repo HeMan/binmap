@@ -228,8 +228,8 @@ class BinmapDataclass:
     """
 
     __binarydata: dataclasses.InitVar[bytes] = b""
-    __datafields: ClassVar[List[str]]
-    __datafieldsmap: ClassVar[Dict]
+    __datafields: ClassVar[Tuple[str, ...]]
+    __datafieldsmap: ClassVar[Dict[str, dataclasses.Field]]
     __formatstring: ClassVar[str]
     __typehints: ClassVar[Dict[str, type]]
     __fieldnames: ClassVar[FrozenSet[str]] = frozenset()
@@ -250,8 +250,12 @@ class BinmapDataclass:
         cls.__fieldnames = frozenset(f.name for f in dataclasses.fields(cls))
         cls.__typehints = type_hints
         cls.__formatstring = byteorder
-        cls.__datafieldsmap = {}
-        cls.__datafields = []
+        cls.__datafieldsmap = {f.name: f for f in dataclasses.fields(cls)}
+        # Names of the fields that have a value in the struct (everything but
+        # padding), in wire order: the format string's order, with the "last"
+        # field moved to the end. Built once per class; instances never change it.
+        datafields: List[str] = []
+        lastname = ""
 
         lastfield = ""
         for field_ in dataclasses.fields(cls):
@@ -275,9 +279,15 @@ class BinmapDataclass:
                 if lastfield != "":
                     raise ValueError("Can't have more than one last")
                 lastfield = _type
+                lastname = field_.name
             else:
                 cls.__formatstring += _type
+                if "padding" not in field_.metadata:
+                    datafields.append(field_.name)
         cls.__formatstring += lastfield
+        if lastname:
+            datafields.append(lastname)
+        cls.__datafields = tuple(datafields)
 
     def __setattr__(self, name, value):
         """
@@ -332,7 +342,6 @@ class BinmapDataclass:
         for f in dataclasses.fields(type(self)):
             if f.name.startswith("_BinmapDataclass__"):
                 continue
-            self.__datafieldsmap.update({f.name: f})
             if "padding" in f.metadata:
                 continue
             if "constant" in f.metadata:
@@ -347,7 +356,6 @@ class BinmapDataclass:
                 val = getattr(self, f.name)
                 del self.__dict__[f.name]
                 self.__dict__.update({f.name: val})
-            self.__datafields.append(f.name)
         if _binarydata != b"":
             self.frombytes(_binarydata)
 
@@ -357,7 +365,8 @@ class BinmapDataclass:
         :param bytes value: binary string to unpack
         """
         args = struct.unpack(self.__formatstring, value)
-        for arg, name in zip(args, self.__datafields):
+        # strict: the struct has exactly one value per data field
+        for arg, name in zip(args, self.__datafields, strict=True):
             if "constant" in self.__datafieldsmap[name].metadata:
                 if arg != self.__datafieldsmap[name].default:
                     raise ValueError("Constant doesn't match binary data")
