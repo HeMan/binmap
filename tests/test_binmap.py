@@ -115,6 +115,38 @@ class TestTempClass:
             t.temp = -1
         assert "format requires 0 <= number <= 255" in str(excinfo)
 
+    def test_value_bounds_in_constructor(self):
+        with pytest.raises(struct.error) as excinfo:
+            Temp(temp=256)
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+    def test_wrong_type(self):
+        t = Temp()
+        with pytest.raises(struct.error) as excinfo:
+            t.temp = "10"
+        assert "required argument is not an integer" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            t.temp = 1.5
+        assert "required argument is not an integer" in str(excinfo)
+
+    def test_failed_assignment_keeps_value(self):
+        t = Temp(temp=5)
+        with pytest.raises(struct.error):
+            t.temp = 256
+        assert t.temp == 5
+        assert bytes(t) == b"\x05"
+
+    def test_wrong_length_binarydata(self):
+        with pytest.raises(struct.error) as excinfo:
+            Temp(b"\x0a\x0b")
+        assert "unpack requires a buffer of 1 bytes" in str(excinfo)
+
+        t = Temp()
+        with pytest.raises(struct.error) as excinfo:
+            t.frombytes(b"")
+        assert "unpack requires a buffer of 1 bytes" in str(excinfo)
+
     def test_compare_equal(self):
         t1 = Temp(temp=10)
         t2 = Temp(temp=10)
@@ -564,6 +596,130 @@ class TestInheritance:
         assert ch.wind == WindEnum.East
         assert ch.humidity == 37
 
+    def test_inherited_value_bounds(self):
+        class Child(Temp):
+            humidity: b_types.unsignedchar = 0
+
+        ch = Child()
+        with pytest.raises(struct.error) as excinfo:
+            ch.temp = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            Child(temp=-1)
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+    def test_multilevel_inheritance(self):
+        class Child(Temp):
+            humidity: b_types.unsignedchar = 0
+
+        class Grandchild(Child):
+            lux: b_types.unsignedshort = 0
+
+        gc = Grandchild(temp=1, humidity=2, lux=3)
+        assert bytes(gc) == b"\x01\x02\x00\x03"
+
+        with pytest.raises(struct.error) as excinfo:
+            gc.temp = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            gc.humidity = -1
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            gc.lux = 70000
+        # The upper bound is spelled differently on Python <= 3.10
+        assert "format requires 0 <= number <=" in str(excinfo)
+
+    def test_subclass_without_own_fields(self):
+        class Sub(Temp):
+            pass
+
+        s = Sub(temp=10)
+        assert bytes(s) == b"\x0a"
+        assert Sub(b"\x14").temp == 20
+
+        with pytest.raises(struct.error) as excinfo:
+            s.temp = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+    def test_redeclared_field_uses_child_type(self):
+        class Wider(Temp):
+            temp: b_types.unsignedshort = 0
+
+        w = Wider(temp=300)
+        assert bytes(w) == b"\x01\x2c"
+        assert Wider(b"\x01\x2c").temp == 300
+
+        with pytest.raises(struct.error) as excinfo:
+            w.temp = 70000
+        assert "format requires 0 <= number <=" in str(excinfo)
+
+    def test_multiple_inheritance(self):
+        class First(binmap.BinmapDataclass):
+            first: b_types.unsignedchar = 0
+
+        class Second(binmap.BinmapDataclass):
+            second: b_types.unsignedshort = 0
+
+        class Both(First, Second):
+            own: b_types.unsignedchar = 0
+
+        # dataclasses collect fields in reverse MRO order, so the last base's
+        # fields come first on the wire.
+        b = Both(first=1, second=2, own=3)
+        assert bytes(b) == b"\x00\x02\x01\x03"
+        assert astuple(Both(b"\x00\x02\x01\x03")) == (2, 1, 3)
+
+        with pytest.raises(struct.error) as excinfo:
+            b.first = 256
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+
+        with pytest.raises(struct.error) as excinfo:
+            b.second = 70000
+        assert "format requires 0 <= number <=" in str(excinfo)
+
+    def test_multiple_inheritance_conflicting_types_without_own_fields(self):
+        class Short(binmap.BinmapDataclass):
+            value: b_types.unsignedshort = 0
+
+        class Char(binmap.BinmapDataclass):
+            value: b_types.unsignedchar = 0
+
+        class Both(Short, Char):
+            pass
+
+        # Short comes first in the MRO, so value is an unsignedshort
+        b = Both(value=300)
+        assert bytes(b) == b"\x01\x2c"
+        assert Both(b"\x01\x2c").value == 300
+
+        with pytest.raises(struct.error) as excinfo:
+            b.value = 70000
+        assert "format requires 0 <= number <=" in str(excinfo)
+
+    @pytest.mark.xfail(
+        raises=struct.error,
+        strict=True,
+        reason="BinField.__set__ validates against every base that declares the "
+        "field instead of the type used on the wire, so valid values are rejected",
+    )
+    def test_multiple_inheritance_conflicting_types(self):
+        class Short(binmap.BinmapDataclass):
+            value: b_types.unsignedshort = 0
+
+        class Char(binmap.BinmapDataclass):
+            value: b_types.unsignedchar = 0
+
+        class Both(Short, Char):
+            own: b_types.unsignedchar = 0
+
+        # Short comes first in the MRO, so value is an unsignedshort
+        b = Both(value=300, own=1)
+        assert bytes(b) == b"\x01\x2c\x01"
+        assert Both(b"\x01\x2c\x01").value == 300
+
 
 class AutoLength(binmap.BinmapDataclass):
     length: b_types.unsignedchar = binmap.autolength()
@@ -725,3 +881,22 @@ class TestCalculatedField:
                 )
 
         assert "Can't have more than one last" in str(excinfo)
+
+
+class TestInvalidClassDefinition:
+    def test_unsupported_type(self):
+        with pytest.raises(KeyError):
+
+            class UnsupportedType(binmap.BinmapDataclass):
+                values: list = None
+
+    def test_undefined_annotation(self):
+        # Python <= 3.13 fails while running the class body. Python 3.14+
+        # defers annotations (PEP 649), so it fails when __init_subclass__
+        # resolves them instead.
+        with pytest.raises(NameError) as excinfo:
+
+            class UndefinedAnnotation(binmap.BinmapDataclass):
+                value: Undefined = 0  # noqa: F821
+
+        assert "name 'Undefined' is not defined" in str(excinfo)
