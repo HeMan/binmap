@@ -87,6 +87,7 @@ def _not_allowed() -> None:
     Packet(kind=1)  # type: ignore[call-arg]  # constants aren't arguments
     Packet(length=3)  # type: ignore[call-arg]  # nor is an autolength
     TempHum(tmp=1)  # type: ignore[call-arg]  # no such field
+    th.humidty = 5  # type: ignore[attr-defined]  # typo: no such field
     TempHum(temp="hot")  # type: ignore[arg-type]
     packet.name = "text"  # type: ignore[assignment]  # strings are bytes
 

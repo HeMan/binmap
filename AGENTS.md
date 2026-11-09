@@ -274,6 +274,11 @@ not what `__init_subclass__` does at runtime. Keep these in place:
     call without `default=` as a required field, which isn't allowed after the inherited
     `__binarydata` (it has a default). As a result, type checkers can't flag a missing
     value for an `enumfield()` without a default, which fails at runtime.
+- **`__setattr__` is defined under `if not TYPE_CHECKING:`.** A `__setattr__` that type
+  checkers can see tells them any attribute name with any value may be assigned, so
+  they'd accept typos like `t.humidty = 5`. Hidden, they check assignments against the
+  declared fields; the runtime guard is unchanged. The typing sample keeps a typo in
+  `_not_allowed()` to hold this.
 - **`py.typed` and `__all__`.** Add new public names to `__all__`: with `py.typed`,
   pyright treats a name that's only imported into the module (like `b_types`) as
   private, and Sphinx autodoc documents only what `__all__` lists.
@@ -326,9 +331,18 @@ not what `__init_subclass__` does at runtime. Keep these in place:
   - binmap is checked with `mypy --strict --disallow-any-explicit` and with pyright in
     strict mode (`# pyright: strict` at the top of its modules). The user-code sample
     runs in pyright's default mode, as editors do.
-  - Annotate everything. Use `object` for values that really can be anything, so the
-    checker makes you narrow them before use, and `cast()` (with a comment) where the
-    standard library's own stubs say `Any`, e.g. `Field.default`.
+  - Annotate everything, as precisely as the checkers can verify.
+  - `object` is the honest type where a value really can be anything. Unlike `Any`, the
+    checker then makes you narrow it before use. binmap uses it for:
+    - inputs that are being validated (descriptors' `__set__`, `_check_value`);
+    - type hints (the precise `typing.TypeForm` needs Python 3.15);
+    - field values read back from the instance `__dict__`, which Python types as
+      `dict[str, Any]`.
+  - Don't narrow those with `cast()` just to look precise. A cast is an unchecked
+    promise; an `EnumField` assigned a member's *name* stores the string, which would
+    break a cast to `int | float | bytes`.
+  - Use `cast()` (with a comment) only where binmap guarantees the type itself, e.g.
+    `Field.default` for padding (`int`) and strings (`bytes`).
   - The two `pyright: ignore`s in `binmap/__init__.py` are intentional:
     - The name-mangled `__binarydata` can't clash with subclass fields and is
       positional-only for type checkers.

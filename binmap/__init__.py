@@ -5,6 +5,7 @@ from dataclasses import InitVar
 from enum import IntEnum, IntFlag
 from functools import partial
 from typing import (
+    TYPE_CHECKING,
     Annotated,
     Callable,
     ClassVar,
@@ -13,6 +14,7 @@ from typing import (
     List,
     Literal,
     NoReturn,
+    Optional,
     Tuple,
     Type,
     TypeVar,
@@ -304,7 +306,7 @@ class _FieldsWithoutPaddingOnInstances:
         }
 
     def __get__(
-        self, obj: object, owner: type
+        self, obj: Optional["BinmapDataclass"], owner: type
     ) -> Dict[str, "dataclasses.Field[object]"]:
         return self.fields if obj is None else self.instance_fields
 
@@ -436,21 +438,26 @@ class BinmapDataclass:
         # bytes natively on 64-bit Linux but 4 bytes with ">" or "<").
         struct.pack(cls.__byteorder + code, value)
 
-    def __setattr__(self, name: str, value: object) -> None:
-        """
-        Only fields, and class attributes that handle assignment themselves
-        (such as properties), can be assigned.
+    # Hidden from type checkers: a visible __setattr__ tells them any attribute
+    # name with any value can be assigned, so they'd accept typos such as
+    # `t.humidty = 5`. Without it they use the declared fields, as intended.
+    if not TYPE_CHECKING:
 
-        :raises AttributeError: for any other name, so a typo can't silently add
-          an attribute that ``bytes()`` later fails on.
-        """
-        if name not in self.__fieldnames and not hasattr(
-            getattr(type(self), name, None), "__set__"
-        ):
-            raise AttributeError(
-                f"{type(self).__name__} has no field {name!r}", name=name, obj=self
-            )
-        super().__setattr__(name, value)
+        def __setattr__(self, name: str, value: object) -> None:
+            """
+            Only fields, and class attributes that handle assignment themselves
+            (such as properties), can be assigned.
+
+            :raises AttributeError: for any other name, so a typo can't silently
+              add an attribute that ``bytes()`` later fails on.
+            """
+            if name not in self.__fieldnames and not hasattr(
+                getattr(type(self), name, None), "__set__"
+            ):
+                raise AttributeError(
+                    f"{type(self).__name__} has no field {name!r}", name=name, obj=self
+                )
+            super().__setattr__(name, value)
 
     def __bytes__(self) -> bytes:
         """
