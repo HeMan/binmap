@@ -637,6 +637,55 @@ class TestAllDatatypes:
         assert sc.pascalstring == b"hi pascal"
 
 
+INTEGER_TYPES = [
+    (b_types.signedchar, "b"),
+    (b_types.unsignedchar, "B"),
+    (b_types.short, "h"),
+    (b_types.unsignedshort, "H"),
+    (b_types.integer, "i"),
+    (b_types.unsignedinteger, "I"),
+    (b_types.long, "l"),
+    (b_types.unsignedlong, "L"),
+    (b_types.longlong, "q"),
+    (b_types.unsignedlonglong, "Q"),
+]
+
+
+class TestIntegerBounds:
+    @pytest.mark.parametrize("byteorder", [">", "<"])
+    @pytest.mark.parametrize("datatype, code", INTEGER_TYPES)
+    def test_assignment_accepts_exactly_what_packs(self, datatype, code, byteorder):
+        class Value(binmap.BinmapDataclass, byteorder=byteorder):
+            v: datatype = 0
+
+        bits = 8 * struct.calcsize(byteorder + code)
+        if code.islower():  # signed
+            lowest, highest = -(2 ** (bits - 1)), 2 ** (bits - 1) - 1
+        else:
+            lowest, highest = 0, 2**bits - 1
+
+        value = Value()
+        for valid in (lowest, highest):
+            value.v = valid
+            assert struct.unpack(byteorder + code, bytes(value)) == (valid,)
+        for invalid in (lowest - 1, highest + 1):
+            with pytest.raises(struct.error):
+                value.v = invalid
+            with pytest.raises(struct.error):
+                Value(v=invalid)
+        assert value.v == highest
+
+    def test_native_byteorder_uses_native_sizes(self):
+        class Native(binmap.BinmapDataclass, byteorder="@"):
+            v: b_types.long = 0
+
+        highest = 2 ** (8 * struct.calcsize("@l") - 1) - 1
+        native = Native(v=highest)
+        assert bytes(native) == struct.pack("@l", highest)
+        with pytest.raises(struct.error):
+            native.v = highest + 1
+
+
 class TestInheritance:
     def test_simple_inheritance(self):
         class Child(Temp):

@@ -188,9 +188,13 @@ Read this before touching `binmap/__init__.py`.
   class's stored type hints and does a trial `struct.pack`. So out-of-range values raise
   `struct.error` as soon as they're assigned, including through the constructor and
   `frombytes`.
-  - The trial pack uses the bare format code (native mode, no byte-order prefix), while
-    `bytes()` uses the class's prefix (standard sizes). See the `long` entry under *Known
-    issues*.
+  - The trial pack uses the class's byte-order prefix (stored by `__init_subclass__`)
+    plus the field's code, just as `bytes()` does. So assignment accepts exactly the
+    values `bytes()` can pack, and sizes follow the byte order: standard sizes for `>`
+    and `<`, native for `@`.
+  - Never validate with a bare code: that uses native sizes (`l` is 8 bytes on 64-bit
+    Linux, 4 with `>`). `TestIntegerBounds` checks every integer type's bounds in both
+    byte orders.
 - **The raw-bytes argument** is the `InitVar` `__binarydata`, name-mangled to
   `_BinmapDataclass__binarydata`. It is the first positional parameter, which is why
   `Cls(b"...")` parses data. Code that iterates fields skips names that start with
@@ -274,10 +278,6 @@ Read this before touching `binmap/__init__.py`.
 
 These are current bugs or debt, not intended behaviour. Fix them only when asked.
 
-- `long` and `unsignedlong` fields can accept out-of-range values. Assignment validates
-  with native sizes (8 bytes on 64-bit Linux and macOS), but `bytes()` packs with standard
-  sizes (4 bytes). So `obj.v = 2**40` is accepted and `bytes(obj)` then raises
-  `struct.error`.
 - `dataclasses.fields(SomeClass)` still lists padding, while `fields(instance)`,
   `asdict()` and `astuple()` leave it out. So zipping `fields(SomeClass)` with
   `astuple(obj)` silently misaligns the values, and code that walks the class's fields and
