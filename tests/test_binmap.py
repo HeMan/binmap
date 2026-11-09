@@ -1,5 +1,5 @@
 import struct
-from dataclasses import asdict, astuple
+from dataclasses import asdict, astuple, fields, replace
 from enum import IntEnum, IntFlag
 
 import pytest
@@ -257,8 +257,6 @@ class TestPadClass:
         assert p.temp == 10
         assert p.humidity == 60
         assert str(p) == "Pad(temp=10, humidity=60)"
-        # TODO: make it work with asdict/astuple
-        return
         assert asdict(p) == {"temp": 10, "humidity": 60}
         assert astuple(p) == (10, 60)
 
@@ -307,6 +305,38 @@ class TestPadClass:
         p.temp = 10
         p.humidity = 60
         assert bytes(p) == b"\n\x00\x00<\x00\x00\x00\x00"
+
+    def test_asdict_astuple_parsed_data(self):
+        p = Pad(b"\x0a\x10\x20\x3c")
+        assert asdict(p) == {"temp": 10, "humidity": 60}
+        assert astuple(p) == (10, 60)
+
+    def test_advanced_asdict_astuple(self):
+        p = AdvancedPad(temp=10, humidity=60)
+        assert asdict(p) == {"temp": 10, "humidity": 60}
+        assert astuple(p) == (10, 60)
+
+    def test_inherited_padding_asdict_astuple(self):
+        class Child(Pad):
+            _pad2: b_types.pad = binmap.padding(1)
+            lux: b_types.unsignedshort = 0
+
+        c = Child(temp=10, humidity=60, lux=400)
+        assert bytes(c) == b"\x0a\x00\x00\x3c\x00\x01\x90"
+        assert asdict(c) == {"temp": 10, "humidity": 60, "lux": 400}
+        assert astuple(c) == (10, 60, 400)
+
+    def test_replace(self):
+        p = Pad(temp=10, humidity=60)
+        p2 = replace(p, temp=20)
+        assert str(p2) == "Pad(temp=20, humidity=60)"
+        assert bytes(p2) == b"\x14\x00\x00\x3c"
+
+    def test_fields(self):
+        # Instances hide padding so dataclass helpers never try to read it. The
+        # class keeps every field: the wire format and subclasses need them.
+        assert [f.name for f in fields(Pad(temp=1))] == ["temp", "humidity"]
+        assert [f.name for f in fields(Pad)] == ["temp", "pad", "humidity"]
 
 
 class WindEnum(IntEnum):
