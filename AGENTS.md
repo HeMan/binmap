@@ -37,9 +37,10 @@ messages, and `repr` output.
 | `binmap/st.py` | Single-letter aliases named after the `struct` format characters (`st.B`, `st.H`, `st.x`, ...). Not covered by tests. |
 | `tests/test_binmap.py` | Tests for the library. |
 | `tests/test_readme.py` | Runs every `>>>` example in `README.rst` as a doctest. |
+| `tests/test_packaging.py` | Checks that `setup.py` packages only `binmap` (and its subpackages). Skipped without setuptools. |
 | `docs/source/` | Sphinx docs. `index.rst` includes `README.rst`; `binmap.rst` autodocs the package. `conf.py` reads the version from `setup.py`. |
 | `.readthedocs.yml` | Read the Docs build: the main docs site for `master` (latest) and release tags (stable). |
-| `setup.py` | setuptools packaging. There is no `pyproject.toml`. |
+| `setup.py` | setuptools packaging. There is no `pyproject.toml`. `find_packages(include=["binmap", "binmap.*"])` keeps `tests/` out of the installed packages. |
 | `requirements-dev.txt`, `requirements-doc.txt` | Dev and docs tools. Nothing is pinned, and there is no lockfile. |
 | `.python-version` | Pins the local dev environment to Python 3.14 for uv. It's not 3.15 because bump2version doesn't run there. |
 | `tox.ini` | Holds the flake8 and isort config as well as a tox env. |
@@ -281,8 +282,6 @@ These are current bugs or debt, not intended behaviour. Fix them only when asked
   `asdict()` and `astuple()` leave it out. So zipping `fields(SomeClass)` with
   `astuple(obj)` silently misaligns the values, and code that walks the class's fields and
   reads each one from an instance still raises.
-- `find_packages()` in `setup.py` also picks up `tests/`, so a top-level `tests` package
-  gets installed.
 - `string` and `pascalstring` fields accept values longer than the field. Validation
   packs with a bare `s`, which is one byte, so `bytes()` silently cuts the value to fit
   while the attribute keeps the full value.
