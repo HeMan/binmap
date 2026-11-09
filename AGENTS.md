@@ -55,9 +55,15 @@ it and silently runs the newly pinned interpreter from elsewhere, without the de
 (e.g. `Failed to spawn: black`). Recreate it with `uv venv --clear` and reinstall the
 requirements.
 
-**Deactivate any other virtualenv first.** `uv pip` installs into an activated
-`VIRTUAL_ENV`, but `uv run` always uses `.venv`. With another virtualenv active, you
-would install into one environment and run from the other.
+**Deactivate any other virtualenv first.** Outside a uv project, `uv run` picks the first
+interpreter that matches `.python-version`:
+1. an activated `VIRTUAL_ENV`,
+2. then `.venv`,
+3. then any other Python of the pinned version.
+
+`uv pip` always installs into the activated `VIRTUAL_ENV`. So an activated virtualenv can
+silently replace `.venv`, or, when its Python doesn't match the pin, you install into one
+environment and run from another.
 
 ```sh
 uv venv
