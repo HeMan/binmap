@@ -1,0 +1,318 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>binmap &mdash; Binmap 1.2.1 (master branch) documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2573b0b2"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to Binmap’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Binmap
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">binmap</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.BaseDescriptor"><code class="docutils literal notranslate"><span class="pre">BaseDescriptor</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.BinField"><code class="docutils literal notranslate"><span class="pre">BinField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.BinmapDataclass"><code class="docutils literal notranslate"><span class="pre">BinmapDataclass</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#binmap.BinmapDataclass.frombytes"><code class="docutils literal notranslate"><span class="pre">BinmapDataclass.frombytes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.CalculatedField"><code class="docutils literal notranslate"><span class="pre">CalculatedField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.ConstField"><code class="docutils literal notranslate"><span class="pre">ConstField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.EnumField"><code class="docutils literal notranslate"><span class="pre">EnumField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.PaddingField"><code class="docutils literal notranslate"><span class="pre">PaddingField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap._FieldsWithoutPaddingOnInstances"><code class="docutils literal notranslate"><span class="pre">_FieldsWithoutPaddingOnInstances</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.autolength"><code class="docutils literal notranslate"><span class="pre">autolength()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.calculatedfield"><code class="docutils literal notranslate"><span class="pre">calculatedfield()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.constant"><code class="docutils literal notranslate"><span class="pre">constant()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.enumfield"><code class="docutils literal notranslate"><span class="pre">enumfield()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.padding"><code class="docutils literal notranslate"><span class="pre">padding()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.stringfield"><code class="docutils literal notranslate"><span class="pre">stringfield()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Binmap</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">binmap</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/binmap.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-binmap">
+<span id="binmap"></span><h1>binmap<a class="headerlink" href="#module-binmap" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap.BaseDescriptor">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BaseDescriptor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.BaseDescriptor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base class for all descriptors</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> – Variable name</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap.BinField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BinField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.BinField" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BaseDescriptor" title="binmap.BaseDescriptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDescriptor</span></code></a></p>
+<p>BinField descriptor tries to pack it into a struct before setting the
+value as a bounds checker</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap.BinmapDataclass">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BinmapDataclass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_BinmapDataclass__binarydata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dataclasses.InitVar</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">b''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.BinmapDataclass" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Dataclass that does the converting to and from binary data</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="binmap.BinmapDataclass.frombytes">
+<span class="sig-name descname"><span class="pre">frombytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.BinmapDataclass.frombytes" title="Link to this definition"></a></dt>
+<dd><p>Unpacks value to each field. If the data is rejected, the instance is
+left unchanged.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>bytes</em>) – binary string to unpack</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – if a constant, autolength or calculated field
+doesn’t match the data</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap.CalculatedField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">CalculatedField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">function</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.CalculatedField" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BinField" title="binmap.BinField"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinField</span></code></a></p>
+<p>CalculatedField calls a function when it’s converted to bytes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>AttributeError</strong> – Trying to set the value is not allowed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap.ConstField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">ConstField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.ConstField" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BinField" title="binmap.BinField"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinField</span></code></a></p>
+<p>ConstField descriptor keeps it’s value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>AttributeError</strong> – Since it’s a constant it raises and error when
+trying to set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap.EnumField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">EnumField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.EnumField" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BinField" title="binmap.BinField"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinField</span></code></a></p>
+<p>EnumField descriptor uses “enum” to map to and from strings. Accepts
+both strings and values when setting. Only values that has a corresponding
+string is allowed.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap.PaddingField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">PaddingField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.PaddingField" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BaseDescriptor" title="binmap.BaseDescriptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDescriptor</span></code></a></p>
+<p>PaddingField descriptor is used to “pad” data with values unused for real data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>AttributeError</strong> – when trying to read, since it’s only padding.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="binmap._FieldsWithoutPaddingOnInstances">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">_FieldsWithoutPaddingOnInstances</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Field</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap._FieldsWithoutPaddingOnInstances" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Replaces <code class="docutils literal notranslate"><span class="pre">__dataclass_fields__</span></code> on every <code class="docutils literal notranslate"><span class="pre">BinmapDataclass</span></code> subclass.</p>
+<p><code class="docutils literal notranslate"><span class="pre">dataclasses.asdict()</span></code>, <code class="docutils literal notranslate"><span class="pre">astuple()</span></code> and <code class="docutils literal notranslate"><span class="pre">replace()</span></code> read every field
+that <code class="docutils literal notranslate"><span class="pre">dataclasses.fields(instance)</span></code> returns. Padding fields can’t be read,
+so through an instance this returns the fields without padding. Through the
+class it returns all fields: <code class="docutils literal notranslate"><span class="pre">dataclasses</span></code> needs them to build subclasses,
+and binmap needs them for the struct format.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="binmap.autolength">
+<span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">autolength</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Field</span></span></span><a class="headerlink" href="#binmap.autolength" title="Link to this definition"></a></dt>
+<dd><p>Field generator function for autolength fields</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>offset</strong> – offset for the lenght calculation</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataclass field</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="binmap.calculatedfield">
+<span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">calculatedfield</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Field</span></span></span><a class="headerlink" href="#binmap.calculatedfield" title="Link to this definition"></a></dt>
+<dd><p>Field generator function for calculated fields</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>function</strong> (<em>Callable</em>) – function that calculates the field.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataclass field</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="binmap.constant">
+<span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">constant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Field</span></span></span><a class="headerlink" href="#binmap.constant" title="Link to this definition"></a></dt>
+<dd><p>Field generator function for constant elements</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> – Constant value for the field.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataclass field</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="binmap.enumfield">
+<span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">enumfield</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enumclass</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">IntEnum</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">IntFlag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">IntEnum</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">IntFlag</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Field</span></span></span><a class="headerlink" href="#binmap.enumfield" title="Link to this definition"></a></dt>
+<dd><p>Field generator function for enum field</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>enumclass</strong> (<em>IntEnum</em>) – Class with enums.</p></li>
+<li><p><strong>default</strong> (<em>IntEnum</em>) – default value</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataclass field</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="binmap.padding">
+<span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">padding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Field</span></span></span><a class="headerlink" href="#binmap.padding" title="Link to this definition"></a></dt>
+<dd><p>Field generator function for padding elements</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>lenght</strong> (<em>int</em>) – Number of bytes of padded field</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataclass field</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="binmap.stringfield">
+<span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">stringfield</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">b''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Field</span></span></span><a class="headerlink" href="#binmap.stringfield" title="Link to this definition"></a></dt>
+<dd><p>Field generator function for string fields.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lenght</strong> (<em>int</em>) – lengt of the string.</p></li>
+<li><p><strong>default</strong> (<em>bytes</em>) – default value of the string</p></li>
+<li><p><strong>fillchar</strong> (<em>bytes</em>) – char to pad the string with</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataclass field</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Binmap’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Jimmy Hedman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
