@@ -143,7 +143,8 @@ Read this before touching `binmap/__init__.py`.
   - `_struct_code()` takes the code from the `StructCode` in an `Annotated` hint (the
     `binmap.types` aliases, or users' own). Otherwise it maps plain `int`, `float`,
     `bool`, `bytes` and `str` (`_PLAIN_CODES`); an `Annotated` hint without a
-    `StructCode` counts as its Python type. Anything else raises `KeyError`.
+    `StructCode` counts as its Python type. Anything else raises `KeyError`, which
+    `_field_code()` turns into a `BinmapTypeError` naming the field.
   - That's why `get_type_hints()` is always called with `include_extras=True`: without
     it, `Annotated` metadata is dropped and every alias looks like a plain `int`.
   - **Declaration order is wire order**, and parent-class fields come first.
@@ -169,7 +170,7 @@ Read this before touching `binmap/__init__.py`.
   |---|---|---|
   | `padding` | `"padding"` | `PaddingField` |
   | `constant` | `"constant"` | `ConstField` |
-  | `autolength` | `"autolength"` | `ConstField` |
+  | `autolength` | `"autolength"` | `AutolengthField` (a `ConstField`) |
   | `calculatedfield` | `"function"`, `"last"` | `CalculatedField` |
   | `enumfield` | `"enum"` | `EnumField` |
   | `stringfield` | `"length"`, `"autodefault"` | `StringField` |
@@ -182,9 +183,9 @@ Read this before touching `binmap/__init__.py`.
   re-inserts each key so that this order matches field order (the "kludgy hack" comment).
   Anything that adds instance attributes, or changes when keys are inserted, can silently
   corrupt the packed output.
-- **Only fields can be assigned.** `BinmapDataclass.__setattr__` raises `AttributeError`
-  (with `name` and `obj` set, so Python suggests similar fields) for any name that isn't
-  a field.
+- **Only fields can be assigned.** `BinmapDataclass.__setattr__` raises
+  `BinmapAttributeError` (with `name` and `obj` set, so Python suggests similar fields)
+  for any name that isn't a field.
   - Class attributes that handle assignment themselves, such as properties, are still
     allowed.
   - The set of field names is computed once per class in `__init_subclass__`; padding is
@@ -193,10 +194,15 @@ Read this before touching `binmap/__init__.py`.
     ever add field names. So do `copy` and `pickle`.
 - **Calculated fields** store the function itself in `__dict__`. `__bytes__` calls any
   callable value it finds, and the descriptor's `__get__` calls the function.
-- **Validation happens on assignment.** `BinField.__set__` looks up the field's struct
-  code stored on the class and does a trial `struct.pack`. So out-of-range values raise
-  `struct.error` as soon as they're assigned, including through the constructor and
-  `frombytes`.
+- **Validation happens on assignment.** `BinField.__set__` calls
+  `BinmapDataclass._check_value`. It looks up the field's struct code stored on the
+  class, and checks the value in two steps, so a bad value fails as soon as it's
+  assigned, including through the constructor and `frombytes`.
+  1. `_check_type()` checks the value's type for its code and raises `BinmapTypeError`:
+     integers need `__index__` (so NumPy ints work), floats need `__float__` or
+     `__index__`, `?` needs a bool or 0/1, and `c`/`s`/`p` need `bytes`.
+  2. A trial `struct.pack` raises `BinmapValueError` for anything that doesn't fit; the
+     message keeps struct's text, e.g. `temp: 'B' format requires 0 <= number <= 255`.
   - The trial pack uses the class's byte-order prefix (stored by `__init_subclass__`)
     plus the field's code, just as `bytes()` does. So assignment accepts exactly the
     values `bytes()` can pack, and sizes follow the byte order: standard sizes for `>`
@@ -207,20 +213,24 @@ Read this before touching `binmap/__init__.py`.
   - Subclasses that add checks (`StringField`, `EnumField`) must end in
     `super().__set__()`, so the struct check still runs.
 - **Enum fields** (`EnumField`) accept a member, a member's name or a number.
-  - A name is looked up (unknown: `KeyError`) and stores the *member*.
-  - An `int` must be one of the enum's values (`ValueError`) and is stored as given;
-    `IntFlag` accepts any combination of bits.
-  - Anything else raises `ValueError`, even a float the enum itself would accept, such as
-    `2.0` for a member worth 2.
+  - A name is looked up (unknown: `BinmapValueError`) and stores the *member*.
+  - An `int` must be one of the enum's values (`BinmapValueError`) and is stored as
+    given; `IntFlag` accepts any combination of bits.
+  - Anything else raises `BinmapTypeError`, even a float the enum itself would accept,
+    such as `2.0` for a member worth 2.
   - Then the value must fit the field, like any other.
   - The enum class is bound to the descriptor when the class is created.
 - **The raw-bytes argument** is the `InitVar` `__binarydata`, name-mangled to
   `_BinmapDataclass__binarydata`. It is the first positional parameter, which is why
   `Cls(b"...")` parses data. Code that iterates fields skips names that start with
   `_BinmapDataclass__`.
-- **`frombytes` checks data against the class.** Constant, autolength and calculated
-  fields are compared with what the class expects, and a mismatch raises `ValueError`
-  ("Constant doesn't match binary data", "Length doesn't match", "Wrong calculated value").
+- **`frombytes` checks data against the class.**
+  - Data that isn't bytes raises `BinmapTypeError`.
+  - Data of the wrong size raises `BinmapValueError` ("Record needs 12 bytes of data,
+    got 11").
+  - Constant, autolength and calculated fields are compared with what the class
+    expects, and a mismatch raises `BinmapValueError` naming the field and both values
+    ("kind: the data has 22, but the constant is 21").
   - Constants and autolength are checked as they come.
   - Calculated fields are checked only after every other field is assigned, because their
     function may read fields that come later in the struct.
@@ -229,15 +239,15 @@ Read this before touching `binmap/__init__.py`.
 - **Strings are `bytes`.** `string` and `pascalstring` (aliases of `bytes`) and plain
   `bytes`/`str` annotations (codes `s` and `p`) take their size from `stringfield(length)`.
   - They use `StringField`, which rejects values longer than the field holds with
-    `struct.error`; `struct` itself would cut them silently. A `string` holds `length`
+    `BinmapValueError`; `struct` itself would cut them silently. A `string` holds `length`
     bytes, a `pascalstring` `length - 1`, never more than 255.
-  - A default that doesn't fit raises `ValueError` when the class is defined.
+  - A default that doesn't fit raises `BinmapValueError` when the class is defined.
   - `stringfield()` can't tell the two types apart, so it marks an unspecified default
     (`"autodefault"` metadata) as `length` zero bytes. `__init_subclass__` switches it to
     `b""` for a `pascalstring` *before* calling `dataclasses.dataclass()`, which is when
     defaults are captured.
-- **Padding.** The field's default is its byte count. Reading it raises `AttributeError`
-  and writing it is a no-op.
+- **Padding.** The field's default is its byte count. Reading it raises
+  `BinmapAttributeError` and writing it is a no-op.
   - It's `repr=False` and `compare=False`, so the generated `__repr__` and `__eq__` never
     read it. Two instances that differ only in the padding bytes they were parsed from
     compare equal, because those bytes aren't kept.
@@ -248,6 +258,22 @@ Read this before touching `binmap/__init__.py`.
     which subclassing and the struct format need.
   - Inside binmap, use `dataclasses.fields(cls)` or `fields(type(self))` whenever
     padding matters. `fields(self)` skips it.
+
+- **Exceptions.** Everything binmap raises derives from `BinmapError`, and also from
+  the matching built-in, so ordinary `except` clauses keep working:
+
+  | Class | Also a | Raised for |
+  |---|---|---|
+  | `BinmapValueError` | `ValueError`, `struct.error` | a value that doesn't fit, bad data, a bad byteorder or default |
+  | `BinmapTypeError` | `TypeError`, `struct.error` | a value of the wrong type, an unsupported field type, two `last` fields |
+  | `BinmapAttributeError` | `AttributeError` | an unknown attribute, setting a constant/autolength/calculated field, reading padding |
+
+  - `struct.error` is kept in the hierarchy because binmap raised it before 2.0.
+  - Don't let a bare `struct.error`, `KeyError` or `ValueError` from binmap's own code
+    escape; wrap it, as `_check_value` and `EnumField` do.
+  - Only Python's own errors pass through: the dataclass constructor's `TypeError` for
+    unknown keywords, and `NameError` for undefined annotations.
+  - Messages name the field and the values involved; tests assert them.
 
 ### Adding a new datatype
 

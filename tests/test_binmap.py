@@ -125,13 +125,13 @@ class TestTempClass:
 
     def test_wrong_type(self):
         t = Temp()
-        with pytest.raises(struct.error) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             t.temp = "10"
-        assert "required argument is not an integer" in str(excinfo)
+        assert "temp needs an int, got str" in str(excinfo)
 
-        with pytest.raises(struct.error) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             t.temp = 1.5
-        assert "required argument is not an integer" in str(excinfo)
+        assert "temp needs an int, got float" in str(excinfo)
 
     def test_failed_assignment_keeps_value(self):
         t = Temp(temp=5)
@@ -141,14 +141,14 @@ class TestTempClass:
         assert bytes(t) == b"\x05"
 
     def test_wrong_length_binarydata(self):
-        with pytest.raises(struct.error) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             Temp(b"\x0a\x0b")
-        assert "unpack requires a buffer of 1 bytes" in str(excinfo)
+        assert "Temp needs 1 byte of data, got 2" in str(excinfo)
 
         t = Temp()
-        with pytest.raises(struct.error) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             t.frombytes(b"")
-        assert "unpack requires a buffer of 1 bytes" in str(excinfo)
+        assert "Temp needs 1 byte of data, got 0" in str(excinfo)
 
     def test_compare_equal(self):
         t1 = Temp(temp=10)
@@ -334,9 +334,9 @@ class TestStrings:
         assert "identity holds at most 10 bytes, got 11" in str(excinfo)
 
     def test_string_wrong_type(self):
-        with pytest.raises(struct.error) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             Strings(identity="text")
-        assert "argument for 's' must be a bytes object" in str(excinfo)
+        assert "identity needs bytes, got str" in str(excinfo)
 
     def test_pascalstring_default_is_empty(self):
         p = PascalStrings()
@@ -549,13 +549,13 @@ class TestEnumClass:
         assert ec.wind == 2
         assert bytes(ec) == b"\x00\x02"
 
-        with pytest.raises(KeyError) as excinfo:
-            ec.wind = "Norhtwest"
-        assert "'Norhtwest'" in str(excinfo)
-
         with pytest.raises(ValueError) as excinfo:
+            ec.wind = "Norhtwest"
+        assert "'Norhtwest' is not a member of WindEnum" in str(excinfo)
+
+        with pytest.raises(TypeError) as excinfo:
             ec.wind = 1.2
-        assert "1.2 is not a valid WindEnum" in str(excinfo)
+        assert "wind needs an int or a member's name, got float" in str(excinfo)
 
     def test_set_numeric_enum(self):
         ec = EnumClass()
@@ -581,14 +581,14 @@ class TestEnumClass:
     def test_float_equal_to_a_member_is_rejected(self):
         # The enum itself accepts 2.0 for South, but the field can't pack it
         ec = EnumClass(wind=WindEnum.South)
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             ec.wind = 2.0
-        assert "2.0 is not a valid WindEnum" in str(excinfo)
+        assert "wind needs an int or a member's name, got float" in str(excinfo)
         assert ec.wind is WindEnum.South
 
     def test_unknown_name_keeps_value(self):
         ec = EnumClass(wind=WindEnum.South)
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError):
             ec.wind = "Norhtwest"
         assert ec.wind is WindEnum.South
 
@@ -673,7 +673,7 @@ class TestConstValues:
         c = ConstValues(b"\x15\x01")
         with pytest.raises(ValueError) as excinfo:
             ConstValues(b"\x14\x01")
-        assert "Constant doesn't match binary data" in str(excinfo)
+        assert "datatype: the data has 20, but the constant is 21" in str(excinfo)
         assert c.datatype == 0x15
         assert c.status == 1
 
@@ -1046,7 +1046,7 @@ class TestAutolength:
     def test_autolength_bin(self):
         with pytest.raises(ValueError) as excinfo:
             AutoLength(b"\x01\x0a")
-        assert "Length doesn't match" in str(excinfo)
+        assert "length: the data says 1, but the length is 2" in str(excinfo)
         al = AutoLength(b"\x02\x0a")
         assert al.length == 2
         assert al.temp == 10
@@ -1131,13 +1131,15 @@ class TestCalculatedField:
 
         with pytest.raises(ValueError) as excinfo:
             CalculatedField(b"\xe4\x18\x00")
-        assert "Wrong calculated value" in str(excinfo)
+        assert "checksum: the data has 0, but the calculated value is 252" in str(
+            excinfo
+        )
 
     def test_calculated_field_set(self):
         cf = CalculatedField()
         with pytest.raises(AttributeError) as excinfo:
             cf.checksum = 10
-        assert "Can't set a calculated field" in str(excinfo)
+        assert "checksum is a calculated field and can't be set" in str(excinfo)
 
     def test_calculated_field_last(self):
 
@@ -1160,7 +1162,9 @@ class TestCalculatedField:
 
         with pytest.raises(ValueError) as excinfo:
             CalculatedFieldLastInherit(b"\x0b\x20\x00\x00\x01\x30\x00")
-        assert "Wrong calculated value" in str(excinfo)
+        assert "checksum: the data has 0, but the calculated value is 91" in str(
+            excinfo
+        )
 
     def test_calculated_field_last_binary(self):
         # checksum is declared before hum but packed after it
@@ -1181,7 +1185,9 @@ class TestCalculatedField:
         # against the wrong byte would accept this corrupt data.
         with pytest.raises(ValueError) as excinfo:
             CalculatedFieldLast(b"\x0a\x0a\x63")
-        assert "Wrong calculated value" in str(excinfo)
+        assert "checksum: the data has 99, but the calculated value is 20" in str(
+            excinfo
+        )
 
     def test_calculated_field_middle_binary(self):
         cfm = CalculatedFieldMiddle(b"\x0a\x1e\x14")
@@ -1193,13 +1199,15 @@ class TestCalculatedField:
         # it before hum (0x63) is set would accept this corrupt data.
         with pytest.raises(ValueError) as excinfo:
             CalculatedFieldMiddle(b"\x0a\x0a\x63")
-        assert "Wrong calculated value" in str(excinfo)
+        assert "checksum: the data has 10, but the calculated value is 109" in str(
+            excinfo
+        )
 
     def test_failed_frombytes_keeps_values(self):
         cf = CalculatedField(temp=-27, hum=10)
         with pytest.raises(ValueError) as excinfo:
             cf.frombytes(b"\x01\x02\x00")  # checksum should be 0x03
-        assert "Wrong calculated value" in str(excinfo)
+        assert "checksum: the data has 0, but the calculated value is 3" in str(excinfo)
         assert (cf.temp, cf.hum, cf.checksum) == (-27, 10, 239)
         assert bytes(cf) == b"\xe5\x0a\xef"
 
@@ -1253,7 +1261,7 @@ class TestCalculatedField:
         assert bytes(cf) == b"\x0a\x14\x1e"
 
     def test_calculated_field_multi_last(self):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
 
             class CalculatedFieldMultiLast(binmap.BinmapDataclass):
                 temp: b_types.unsignedchar = 0
@@ -1264,10 +1272,10 @@ class TestCalculatedField:
                 checksum1: b_types.unsignedchar = binmap.calculatedfield(chk, last=True)
                 checksum2: b_types.unsignedchar = binmap.calculatedfield(chk, last=True)
 
-        assert "Can't have more than one last" in str(excinfo)
+        assert "Only one calculatedfield(last=True) is allowed" in str(excinfo)
 
     def test_calculated_field_multi_last_inherit(self):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
 
             class CalculatedFieldMultiLastInherit(CalculatedFieldLast):
                 def chk2(self):
@@ -1277,15 +1285,17 @@ class TestCalculatedField:
                     chk2, last=True
                 )
 
-        assert "Can't have more than one last" in str(excinfo)
+        assert "Only one calculatedfield(last=True) is allowed" in str(excinfo)
 
 
 class TestInvalidClassDefinition:
     def test_unsupported_type(self):
-        with pytest.raises(KeyError):
+        with pytest.raises(TypeError) as excinfo:
 
             class UnsupportedType(binmap.BinmapDataclass):
                 values: list = None
+
+        assert "values: list can't be packed" in str(excinfo)
 
     def test_undefined_annotation(self):
         # Python <= 3.13 fails while running the class body. Python 3.14+
@@ -1378,3 +1388,162 @@ class TestClassBookkeeping:
             Child()
         assert astuple(TempHum(b"\x0a\x3c")) == (10, 60)
         assert astuple(Child(b"\x0a\x3c\x01\x90")) == (10, 60, 400)
+
+
+class IndexLike:
+    """A number-like object that isn't an int, like a NumPy integer."""
+
+    def __index__(self):
+        return 5
+
+
+class Record(binmap.BinmapDataclass):
+    kind: b_types.unsignedchar = binmap.constant(0x15)
+    length: b_types.unsignedchar = binmap.autolength()
+    temp: b_types.unsignedchar = 0
+    flag: b_types.boolean = False
+    level: b_types.floating = 0.0
+    letter: b_types.char = b"a"
+    wind: b_types.unsignedchar = binmap.enumfield(WindEnum, default=WindEnum.North)
+    _pad: b_types.pad = binmap.padding(1)
+
+    def chk(self) -> b_types.unsignedchar:
+        return self.temp
+
+    checksum: b_types.unsignedchar = binmap.calculatedfield(chk)
+
+
+class TestExceptions:
+    def test_hierarchy(self):
+        assert issubclass(binmap.BinmapError, Exception)
+        for error, builtin in (
+            (binmap.BinmapValueError, ValueError),
+            (binmap.BinmapTypeError, TypeError),
+            (binmap.BinmapAttributeError, AttributeError),
+        ):
+            assert issubclass(error, binmap.BinmapError)
+            assert issubclass(error, builtin)
+        # binmap raised struct.error for these before 2.0
+        assert issubclass(binmap.BinmapValueError, struct.error)
+        assert issubclass(binmap.BinmapTypeError, struct.error)
+
+    def test_out_of_range_is_caught_every_way(self):
+        r = Record()
+        for caught in (binmap.BinmapValueError, ValueError, struct.error):
+            with pytest.raises(caught):
+                r.temp = 256
+
+    def test_wrong_type_is_caught_every_way(self):
+        r = Record()
+        for caught in (binmap.BinmapTypeError, TypeError, struct.error):
+            with pytest.raises(caught):
+                r.temp = "hot"
+
+    @pytest.mark.parametrize(
+        "field, value, error, message",
+        [
+            ("temp", 256, "BinmapValueError", "temp: "),
+            ("temp", "hot", "BinmapTypeError", "temp needs an int, got str"),
+            ("temp", 1.5, "BinmapTypeError", "temp needs an int, got float"),
+            ("level", "x", "BinmapTypeError", "level needs a float, got str"),
+            ("flag", "yes", "BinmapTypeError", "flag needs a bool, got str"),
+            ("flag", 5, "BinmapValueError", "flag must be True, False, 0 or 1"),
+            ("letter", "a", "BinmapTypeError", "letter needs bytes, got str"),
+            ("letter", b"ab", "BinmapValueError", "letter holds 1 byte, got 2"),
+            ("wind", "Nope", "BinmapValueError", "'Nope' is not a member of"),
+            ("wind", 7, "BinmapValueError", "7 is not a valid WindEnum"),
+            ("wind", 1.5, "BinmapTypeError", "wind needs an int or a member's"),
+        ],
+    )
+    def test_bad_values(self, field, value, error, message):
+        error = getattr(binmap, error)
+        r = Record()
+        before = bytes(r)
+        with pytest.raises(error) as excinfo:
+            setattr(r, field, value)
+        assert message in str(excinfo.value)
+        assert bytes(r) == before
+
+    @pytest.mark.parametrize("value", [True, False, 0, 1])
+    def test_boolean_values(self, value):
+        r = Record(flag=value)
+        assert Record(bytes(r)).flag is bool(value)
+
+    def test_number_like_values_are_accepted(self):
+        # struct accepts anything with __index__, such as NumPy integers
+        r = Record(temp=IndexLike(), level=IndexLike())
+        assert Record(bytes(r)).temp == 5
+        assert Record(bytes(r)).level == 5.0
+
+    @pytest.mark.parametrize(
+        "field, error, message",
+        [
+            ("kind", "BinmapAttributeError", "kind is a constant"),
+            ("length", "BinmapAttributeError", "length is set from the size"),
+            ("checksum", "BinmapAttributeError", "checksum is a calculated field"),
+            ("nope", "BinmapAttributeError", "Record has no field 'nope'"),
+        ],
+    )
+    def test_attributes_that_cant_be_set(self, field, error, message):
+        error = getattr(binmap, error)
+        with pytest.raises(error) as excinfo:
+            setattr(Record(), field, 1)
+        assert message in str(excinfo.value)
+
+    def test_unknown_attribute_keeps_suggestion_details(self):
+        r = Record()
+        with pytest.raises(binmap.BinmapAttributeError) as excinfo:
+            r.tmp = 1
+        assert excinfo.value.name == "tmp"
+        assert excinfo.value.obj is r
+
+    def test_padding_cant_be_read(self):
+        with pytest.raises(binmap.BinmapAttributeError) as excinfo:
+            Record()._pad
+        assert "Padding (_pad) is not readable" in str(excinfo.value)
+
+    def test_bad_data(self):
+        good = bytes(Record(temp=3))
+        cases = [
+            (good[:-1], "Record needs 12 bytes of data, got 11"),
+            (b"\x16" + good[1:], "kind: the data has 22, but the constant is 21"),
+            (good[:1] + b"\x00" + good[2:], "length: the data says 0, but"),
+            (good[:-1] + b"\x63", "checksum: the data has 99, but the calculated"),
+            (good[:9] + b"\x07" + good[10:], "7 is not a valid WindEnum"),
+        ]
+        for data, message in cases:
+            with pytest.raises(binmap.BinmapValueError) as excinfo:
+                Record(data)
+            assert message in str(excinfo.value)
+
+    def test_data_must_be_bytes(self):
+        with pytest.raises(binmap.BinmapTypeError) as excinfo:
+            Record("not bytes")
+        assert "Record needs bytes to parse, got str" in str(excinfo.value)
+
+    def test_invalid_byteorder(self):
+        with pytest.raises(binmap.BinmapValueError) as excinfo:
+
+            class BigEndian(binmap.BinmapDataclass, byteorder="big"):
+                value: b_types.unsignedchar = 0
+
+        assert "byteorder must be one of" in str(excinfo.value)
+        assert "got 'big'" in str(excinfo.value)
+
+    @pytest.mark.parametrize("byteorder", ["@", "=", "<", ">", "!"])
+    def test_valid_byteorders(self, byteorder):
+        class Value(binmap.BinmapDataclass, byteorder=byteorder):
+            value: b_types.unsignedchar = 0
+
+        assert bytes(Value(value=1)) == b"\x01"
+
+    def test_class_definition_errors_are_binmap_errors(self):
+        with pytest.raises(binmap.BinmapTypeError):
+
+            class Unsupported(binmap.BinmapDataclass):
+                values: list = None
+
+        with pytest.raises(binmap.BinmapValueError):
+
+            class TooLong(binmap.BinmapDataclass):
+                name: b_types.string = binmap.stringfield(2, default=b"abc")
