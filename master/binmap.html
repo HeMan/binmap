@@ -44,13 +44,18 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">binmap</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.AutolengthField"><code class="docutils literal notranslate"><span class="pre">AutolengthField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.BaseDescriptor"><code class="docutils literal notranslate"><span class="pre">BaseDescriptor</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.BinField"><code class="docutils literal notranslate"><span class="pre">BinField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.BinmapAttributeError"><code class="docutils literal notranslate"><span class="pre">BinmapAttributeError</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.BinmapDataclass"><code class="docutils literal notranslate"><span class="pre">BinmapDataclass</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#binmap.BinmapDataclass._check_value"><code class="docutils literal notranslate"><span class="pre">BinmapDataclass._check_value()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#binmap.BinmapDataclass.frombytes"><code class="docutils literal notranslate"><span class="pre">BinmapDataclass.frombytes()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.BinmapError"><code class="docutils literal notranslate"><span class="pre">BinmapError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.BinmapTypeError"><code class="docutils literal notranslate"><span class="pre">BinmapTypeError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#binmap.BinmapValueError"><code class="docutils literal notranslate"><span class="pre">BinmapValueError</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.CalculatedField"><code class="docutils literal notranslate"><span class="pre">CalculatedField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.ConstField"><code class="docutils literal notranslate"><span class="pre">ConstField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#binmap.EnumField"><code class="docutils literal notranslate"><span class="pre">EnumField</span></code></a></li>
@@ -93,6 +98,19 @@
   <section id="module-binmap">
 <span id="binmap"></span><h1>binmap<a class="headerlink" href="#module-binmap" title="Link to this heading"></a></h1>
 <dl class="py class">
+<dt class="sig sig-object py" id="binmap.AutolengthField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">AutolengthField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.AutolengthField" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.ConstField" title="binmap.ConstField"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConstField</span></code></a></p>
+<p>AutolengthField descriptor for fields made with <a class="reference internal" href="#binmap.autolength" title="binmap.autolength"><code class="xref py py-func docutils literal notranslate"><span class="pre">autolength()</span></code></a>: the
+value is the size of the packed data, so it can’t be set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#binmap.BinmapAttributeError" title="binmap.BinmapAttributeError"><strong>BinmapAttributeError</strong></a> – when trying to set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="binmap.BaseDescriptor">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BaseDescriptor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.BaseDescriptor" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
@@ -112,6 +130,14 @@
 value as a bounds checker</p>
 </dd></dl>
 
+<dl class="py exception">
+<dt class="sig sig-object py" id="binmap.BinmapAttributeError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BinmapAttributeError</span></span><a class="headerlink" href="#binmap.BinmapAttributeError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BinmapError" title="binmap.BinmapError"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinmapError</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">AttributeError</span></code></p>
+<p>An attribute that isn’t a field, or a field that can’t be set (constant,
+autolength, calculated) or read (padding). Also an <code class="xref py py-class docutils literal notranslate"><span class="pre">AttributeError</span></code>.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="binmap.BinmapDataclass">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BinmapDataclass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_BinmapDataclass__binarydata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dataclasses.InitVar</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">b''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.BinmapDataclass" title="Link to this definition"></a></dt>
@@ -124,7 +150,10 @@ value as a bounds checker</p>
 <a class="reference internal" href="#binmap.BinField" title="binmap.BinField"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinField</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>struct.error</strong> – if the value doesn’t fit the field’s type</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="#binmap.BinmapTypeError" title="binmap.BinmapTypeError"><strong>BinmapTypeError</strong></a> – if the value has the wrong type</p></li>
+<li><p><a class="reference internal" href="#binmap.BinmapValueError" title="binmap.BinmapValueError"><strong>BinmapValueError</strong></a> – if the value doesn’t fit the field</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -139,12 +168,43 @@ left unchanged.</p>
 <dd class="field-odd"><p><strong>value</strong> (<em>bytes</em>) – binary string to unpack</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – if a constant, autolength or calculated field
-doesn’t match the data</p>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#binmap.BinmapTypeError" title="binmap.BinmapTypeError"><strong>BinmapTypeError</strong></a> – if value isn’t bytes</p></li>
+<li><p><a class="reference internal" href="#binmap.BinmapValueError" title="binmap.BinmapValueError"><strong>BinmapValueError</strong></a> – if the data has the wrong size, a constant,
+autolength or calculated field doesn’t match it, or a value in it
+doesn’t fit its field</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="binmap.BinmapError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BinmapError</span></span><a class="headerlink" href="#binmap.BinmapError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Base class of every exception binmap raises.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="binmap.BinmapTypeError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BinmapTypeError</span></span><a class="headerlink" href="#binmap.BinmapTypeError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BinmapError" title="binmap.BinmapError"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinmapError</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">TypeError</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">error</span></code></p>
+<p>A value has the wrong type for its field, or a class definition is invalid
+(a field type binmap can’t pack, two <code class="docutils literal notranslate"><span class="pre">last</span></code> calculated fields).</p>
+<p>Also a <code class="xref py py-class docutils literal notranslate"><span class="pre">TypeError</span></code>, and a <code class="xref py py-class docutils literal notranslate"><span class="pre">struct.error</span></code>, which binmap raised
+for wrong types before 2.0.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="binmap.BinmapValueError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">BinmapValueError</span></span><a class="headerlink" href="#binmap.BinmapValueError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#binmap.BinmapError" title="binmap.BinmapError"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinmapError</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">error</span></code></p>
+<p>A value doesn’t fit its field, binary data doesn’t match the class, or a
+class is defined with a bad byteorder or default.</p>
+<p>Also a <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code>, and a <code class="xref py py-class docutils literal notranslate"><span class="pre">struct.error</span></code>, which binmap
+raised for these before 2.0.</p>
 </dd></dl>
 
 <dl class="py class">
@@ -154,7 +214,7 @@ doesn’t match the data</p>
 <p>CalculatedField calls a function when it’s converted to bytes</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>AttributeError</strong> – Trying to set the value is not allowed</p>
+<dd class="field-odd"><p><a class="reference internal" href="#binmap.BinmapAttributeError" title="binmap.BinmapAttributeError"><strong>BinmapAttributeError</strong></a> – Trying to set the value is not allowed</p>
 </dd>
 </dl>
 </dd></dl>
@@ -166,7 +226,7 @@ doesn’t match the data</p>
 <p>ConstField descriptor keeps it’s value</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>AttributeError</strong> – Since it’s a constant it raises and error when
+<dd class="field-odd"><p><a class="reference internal" href="#binmap.BinmapAttributeError" title="binmap.BinmapAttributeError"><strong>BinmapAttributeError</strong></a> – Since it’s a constant it raises and error when
 trying to set</p>
 </dd>
 </dl>
@@ -183,9 +243,9 @@ fit the field, like any other field’s value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>KeyError</strong> – for a name that isn’t a member’s</p></li>
-<li><p><strong>ValueError</strong> – for a number that isn’t one of the enum’s values</p></li>
-<li><p><strong>struct.error</strong> – for a value that doesn’t fit the field</p></li>
+<li><p><a class="reference internal" href="#binmap.BinmapValueError" title="binmap.BinmapValueError"><strong>BinmapValueError</strong></a> – for a name or number that isn’t a member’s, or a
+value that doesn’t fit the field</p></li>
+<li><p><a class="reference internal" href="#binmap.BinmapTypeError" title="binmap.BinmapTypeError"><strong>BinmapTypeError</strong></a> – for anything but a name or an int</p></li>
 </ul>
 </dd>
 </dl>
@@ -198,7 +258,7 @@ fit the field, like any other field’s value.</p>
 <p>PaddingField descriptor is used to “pad” data with values unused for real data</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>AttributeError</strong> – when trying to read, since it’s only padding.</p>
+<dd class="field-odd"><p><a class="reference internal" href="#binmap.BinmapAttributeError" title="binmap.BinmapAttributeError"><strong>BinmapAttributeError</strong></a> – when trying to read, since it’s only padding.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -212,7 +272,7 @@ that also rejects values longer than the field holds, which struct.pack
 would otherwise cut silently.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>struct.error</strong> – when the value is too long</p>
+<dd class="field-odd"><p><a class="reference internal" href="#binmap.BinmapValueError" title="binmap.BinmapValueError"><strong>BinmapValueError</strong></a> – when the value is too long</p>
 </dd>
 </dl>
 </dd></dl>

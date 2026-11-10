@@ -112,7 +112,7 @@ being silently added:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">th</span><span class="o">.</span><span class="n">humidity</span> <span class="o">=</span> <span class="mi">60</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="c">...</span>
-<span class="gr">AttributeError</span>: <span class="n">TempHum has no field 'humidity'</span>
+<span class="gr">binmap.BinmapAttributeError</span>: <span class="n">TempHum has no field 'humidity'</span>
 </pre></div>
 </div>
 <section id="datatypes">
@@ -173,7 +173,7 @@ sets another default.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Named</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">b</span><span class="s2">"much too long"</span><span class="p">)</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="c">...</span>
-<span class="gr">struct.error</span>: <span class="n">name holds at most 8 bytes, got 13</span>
+<span class="gr">binmap.BinmapValueError</span>: <span class="n">name holds at most 8 bytes, got 13</span>
 </pre></div>
 </div>
 </section>
@@ -220,7 +220,7 @@ datatype.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">signature</span> <span class="o">=</span> <span class="mi">10</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="c">...</span>
-<span class="gr">AttributeError</span>: <span class="n">signature is a constant</span>
+<span class="gr">binmap.BinmapAttributeError</span>: <span class="n">signature is a constant</span>
 </pre></div>
 </div>
 </section>
@@ -257,7 +257,7 @@ field.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="mi">7</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="c">...</span>
-<span class="gr">ValueError</span>: <span class="n">7 is not a valid WindEnum</span>
+<span class="gr">binmap.BinmapValueError</span>: <span class="n">7 is not a valid WindEnum</span>
 </pre></div>
 </div>
 </section>
@@ -276,7 +276,7 @@ offset, for example to ignore its own length.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mb</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="mi">10</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="c">...</span>
-<span class="gr">AttributeError</span>: <span class="n">length is a constant</span>
+<span class="gr">binmap.BinmapAttributeError</span>: <span class="n">length is set from the size of the data and can't be assigned</span>
 </pre></div>
 </div>
 </section>
@@ -300,13 +300,40 @@ function must be declared when the field is added.</p>
 <span class="go">b'\xec\n\xf6'</span>
 </pre></div>
 </div>
+</section>
+<section id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Link to this heading"></a></h2>
+<p>Everything binmap raises derives from <cite>binmap.BinmapError</cite>, and also from the
+built-in exception you’d expect, so ordinary <cite>except</cite> clauses work:</p>
+<ul class="simple">
+<li><p><cite>BinmapValueError</cite> (a <cite>ValueError</cite>): a value that doesn’t fit its field, or binary
+data that doesn’t match the class.</p></li>
+<li><p><cite>BinmapTypeError</cite> (a <cite>TypeError</cite>): a value of the wrong type, or an invalid class
+definition.</p></li>
+<li><p><cite>BinmapAttributeError</cite> (an <cite>AttributeError</cite>): an attribute that isn’t a field, or a
+field that can’t be set or read.</p></li>
+</ul>
+<p><cite>BinmapValueError</cite> and <cite>BinmapTypeError</cite> are also <cite>struct.error</cite>, which binmap raised
+for these before version 2.0.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">th</span><span class="o">.</span><span class="n">temp</span> <span class="o">=</span> <span class="s2">"hot"</span>
+<span class="gp">... </span><span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+<span class="go">temp needs an int, got str</span>
+</pre></div>
+</div>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="binmap.html">binmap</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.AutolengthField"><code class="docutils literal notranslate"><span class="pre">AutolengthField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BaseDescriptor"><code class="docutils literal notranslate"><span class="pre">BaseDescriptor</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinField"><code class="docutils literal notranslate"><span class="pre">BinField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinmapAttributeError"><code class="docutils literal notranslate"><span class="pre">BinmapAttributeError</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinmapDataclass"><code class="docutils literal notranslate"><span class="pre">BinmapDataclass</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinmapError"><code class="docutils literal notranslate"><span class="pre">BinmapError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinmapTypeError"><code class="docutils literal notranslate"><span class="pre">BinmapTypeError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinmapValueError"><code class="docutils literal notranslate"><span class="pre">BinmapValueError</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.CalculatedField"><code class="docutils literal notranslate"><span class="pre">CalculatedField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.ConstField"><code class="docutils literal notranslate"><span class="pre">ConstField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.EnumField"><code class="docutils literal notranslate"><span class="pre">EnumField</span></code></a></li>
