@@ -47,7 +47,7 @@ being silently added:
    >>> th.humidity = 60
    Traceback (most recent call last):
    ...
-   AttributeError: TempHum has no field 'humidity'
+   binmap.BinmapAttributeError: TempHum has no field 'humidity'
 
 
 
@@ -121,7 +121,7 @@ A value longer than the field holds is rejected, instead of being cut:
    >>> Named(name=b"much too long")
    Traceback (most recent call last):
    ...
-   struct.error: name holds at most 8 bytes, got 13
+   binmap.BinmapValueError: name holds at most 8 bytes, got 13
 
 
 Padding
@@ -171,7 +171,7 @@ datatype.
    >>> c.signature = 10
    Traceback (most recent call last):
    ...
-   AttributeError: signature is a constant
+   binmap.BinmapAttributeError: signature is a constant
 
 Enums
 -----
@@ -209,7 +209,7 @@ field.
    >>> w.direction = 7
    Traceback (most recent call last):
    ...
-   ValueError: 7 is not a valid WindEnum
+   binmap.BinmapValueError: 7 is not a valid WindEnum
 
 
 Autolength
@@ -230,7 +230,7 @@ offset, for example to ignore its own length.
    >>> mb.length = 10
    Traceback (most recent call last):
    ...
-   AttributeError: length is a constant
+   binmap.BinmapAttributeError: length is set from the size of the data and can't be assigned
 
 Calculated fields
 -----------------
@@ -255,3 +255,25 @@ function must be declared when the field is added.
    b'\xec\n\xf6'
 
 
+Exceptions
+----------
+Everything binmap raises derives from `binmap.BinmapError`, and also from the
+built-in exception you'd expect, so ordinary `except` clauses work:
+
+- `BinmapValueError` (a `ValueError`): a value that doesn't fit its field, or binary
+  data that doesn't match the class.
+- `BinmapTypeError` (a `TypeError`): a value of the wrong type, or an invalid class
+  definition.
+- `BinmapAttributeError` (an `AttributeError`): an attribute that isn't a field, or a
+  field that can't be set or read.
+
+`BinmapValueError` and `BinmapTypeError` are also `struct.error`, which binmap raised
+for these before version 2.0.
+
+.. code-block:: python
+
+   >>> try:
+   ...     th.temp = "hot"
+   ... except TypeError as error:
+   ...     print(error)
+   temp needs an int, got str
