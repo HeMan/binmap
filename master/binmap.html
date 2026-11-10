@@ -174,11 +174,21 @@ trying to set</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="binmap.EnumField">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">EnumField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.EnumField" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">binmap.</span></span><span class="sig-name descname"><span class="pre">EnumField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enumclass</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">IntEnum</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">IntFlag</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#binmap.EnumField" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#binmap.BinField" title="binmap.BinField"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinField</span></code></a></p>
-<p>EnumField descriptor uses “enum” to map to and from strings. Accepts
-both strings and values when setting. Only values that has a corresponding
-string is allowed.</p>
+<p>EnumField descriptor for fields made with <a class="reference internal" href="#binmap.enumfield" title="binmap.enumfield"><code class="xref py py-func docutils literal notranslate"><span class="pre">enumfield()</span></code></a>. Accepts a
+member, a member’s name or a number. A name stores the member it names; a
+number is stored as given. Either way the value must belong to the enum and
+fit the field, like any other field’s value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>KeyError</strong> – for a name that isn’t a member’s</p></li>
+<li><p><strong>ValueError</strong> – for a number that isn’t one of the enum’s values</p></li>
+<li><p><strong>struct.error</strong> – for a value that doesn’t fit the field</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py class">

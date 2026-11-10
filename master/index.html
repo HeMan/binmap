@@ -226,9 +226,10 @@ datatype.</p>
 </section>
 <section id="enums">
 <h2>Enums<a class="headerlink" href="#enums" title="Link to this heading"></a></h2>
-<p>Enumfield maps against IntEnum or IntFlag so that you could set the value
-either as the enum or as the numeric value. The value is stored as given, and a
-number has to match one of the enum’s values.</p>
+<p>Enumfield maps against IntEnum or IntFlag, so you can set the value as a member,
+a member’s name or a number. A name stores the member it names. A number is stored as
+given and has to match one of the enum’s values. Either way the value has to fit the
+field.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">WindEnum</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="n">North</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="gp">... </span>    <span class="n">East</span> <span class="o">=</span> <span class="mi">1</span>
@@ -248,6 +249,11 @@ number has to match one of the enum’s values.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">==</span> <span class="n">WindEnum</span><span class="o">.</span><span class="n">South</span>
 <span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="s2">"North"</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span>
+<span class="go">&lt;WindEnum.North: 0&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">w</span><span class="p">))</span>
+<span class="go">b'\x00\x00'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="mi">7</span>
 <span class="gt">Traceback (most recent call last):</span>
 <span class="c">...</span>
