@@ -564,6 +564,50 @@ class TestEnumClass:
         assert bytes(ec) == b"\x00\x02"
         assert str(ec) == "EnumClass(temp=0, wind=2)"
 
+    def test_set_enum_by_name(self):
+        # A member's name stores the member, which packs as its value
+        ec = EnumClass()
+        ec.wind = "South"
+        assert ec.wind is WindEnum.South
+        assert bytes(ec) == b"\x00\x02"
+        assert str(ec) == "EnumClass(temp=0, wind=<WindEnum.South: 2>)"
+        assert EnumClass(bytes(ec)) == ec
+
+    def test_construct_enum_by_name(self):
+        ec = EnumClass(temp=1, wind="West")
+        assert ec.wind is WindEnum.West
+        assert bytes(ec) == b"\x01\x03"
+
+    def test_float_equal_to_a_member_is_rejected(self):
+        # The enum itself accepts 2.0 for South, but the field can't pack it
+        ec = EnumClass(wind=WindEnum.South)
+        with pytest.raises(ValueError) as excinfo:
+            ec.wind = 2.0
+        assert "2.0 is not a valid WindEnum" in str(excinfo)
+        assert ec.wind is WindEnum.South
+
+    def test_unknown_name_keeps_value(self):
+        ec = EnumClass(wind=WindEnum.South)
+        with pytest.raises(KeyError):
+            ec.wind = "Norhtwest"
+        assert ec.wind is WindEnum.South
+
+    def test_enum_value_must_fit_the_field(self):
+        class Big(IntEnum):
+            Small = 1
+            Huge = 300  # doesn't fit in an unsignedchar
+
+        class BigEnum(binmap.BinmapDataclass):
+            size: b_types.unsignedchar = binmap.enumfield(Big, default=Big.Small)
+
+        be = BigEnum()
+        with pytest.raises(struct.error) as excinfo:
+            be.size = Big.Huge
+        assert "format requires 0 <= number <= 255" in str(excinfo)
+        assert be.size is Big.Small
+        with pytest.raises(struct.error):
+            BigEnum(size="Huge")
+
 
 class TestFlagClass:
     def test_create_class(self):
@@ -584,6 +628,20 @@ class TestFlagClass:
         assert fc.perm & FlagEnum.W
         assert fc.perm & (FlagEnum.W | FlagEnum.X)
         assert not fc.perm & FlagEnum.R
+
+    def test_set_flag_by_name(self):
+        fc = FlagClass()
+        fc.perm = "W"
+        assert fc.perm is FlagEnum.W
+        assert bytes(fc) == b"\x02"
+
+    def test_flag_value_must_fit_the_field(self):
+        # IntFlag accepts any combination of bits, so only the field's size
+        # limits the value
+        fc = FlagClass()
+        with pytest.raises(struct.error):
+            fc.perm = 256
+        assert fc.perm == 0
 
 
 class ConstValues(binmap.BinmapDataclass):
