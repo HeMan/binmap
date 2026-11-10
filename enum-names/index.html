@@ -1,0 +1,366 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Binmap’s documentation! &mdash; Binmap 1.2.1 (enum-names branch) documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=bb34ce39"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="binmap" href="binmap.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            Binmap
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="binmap.html">binmap</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Binmap</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to Binmap’s documentation!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-binmap-s-documentation">
+<h1>Welcome to Binmap’s documentation!<a class="headerlink" href="#welcome-to-binmap-s-documentation" title="Link to this heading"></a></h1>
+<p>Dataclass for go to and from binary data</p>
+<p>It follows dataclass pattern with typehinting as the binary format.
+Temperature with one unsigned byte:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Temperature</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">temp</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">Temperature</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t</span><span class="o">.</span><span class="n">temp</span> <span class="o">=</span> <span class="mi">22</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+<span class="go">b'\x16'</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t2</span> <span class="o">=</span> <span class="n">Temperature</span><span class="p">(</span><span class="sa">b</span><span class="s1">'</span><span class="se">\x20</span><span class="s1">'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">t2</span><span class="o">.</span><span class="n">temp</span><span class="p">)</span>
+<span class="go">32</span>
+</pre></div>
+</div>
+<p>Temperature and humidity consisting of one signed byte for temperature and
+one unsigned byte for humidity:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">TempHum</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">temp</span><span class="p">:</span> <span class="n">signedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">... </span>    <span class="n">hum</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">th</span> <span class="o">=</span> <span class="n">TempHum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">th</span><span class="o">.</span><span class="n">temp</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">th</span><span class="o">.</span><span class="n">hum</span> <span class="o">=</span> <span class="mi">60</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">th</span><span class="p">))</span>
+<span class="go">b'\xf6&lt;'</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">th2</span> <span class="o">=</span> <span class="n">TempHum</span><span class="p">(</span><span class="sa">b</span><span class="s1">'</span><span class="se">\xea\x41</span><span class="s1">'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">th2</span><span class="o">.</span><span class="n">temp</span><span class="p">)</span>
+<span class="go">-22</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">th2</span><span class="o">.</span><span class="n">hum</span><span class="p">)</span>
+<span class="go">65</span>
+</pre></div>
+</div>
+<p>Only fields can be assigned, so a misspelled name fails right away instead of
+being silently added:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">th</span><span class="o">.</span><span class="n">humidity</span> <span class="o">=</span> <span class="mi">60</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">AttributeError</span>: <span class="n">TempHum has no field 'humidity'</span>
+</pre></div>
+</div>
+<section id="datatypes">
+<h2>Datatypes<a class="headerlink" href="#datatypes" title="Link to this heading"></a></h2>
+<p>Binmap supports all datatypes that standard library <a class="reference external" href="https://docs.python.org/3/library/struct.html">struct</a> has.
+The types works as typehints in the dataclass. When giving an attribute a
+typehinted datatype it will be added to the binary output from the class.
+Plain <cite>int</cite>, <cite>float</cite> and <cite>bool</cite> work too (packed like <cite>integer</cite>, <cite>floating</cite> and
+<cite>boolean</cite>), as does <cite>bytes</cite> with a <cite>stringfield</cite>.</p>
+</section>
+<section id="type-checking-and-editors">
+<h2>Type checking and editors<a class="headerlink" href="#type-checking-and-editors" title="Link to this heading"></a></h2>
+<p>Binmap ships type information (<cite>py.typed</cite>), and type checkers and editors see binmap
+classes as dataclasses: they know each class’s constructor and show fields as plain
+Python types (<cite>int</cite>, <cite>float</cite>, <cite>bool</cite> or <cite>bytes</cite>). CI checks this with mypy and with
+pyright, the engine behind VS Code’s Pylance.</p>
+<p>The types in <cite>binmap.types</cite> are <cite>Annotated</cite> aliases that carry the struct format
+character in a <cite>StructCode</cite>, so you can define your own:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">binmap.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">StructCode</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rgb565</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">StructCode</span><span class="p">(</span><span class="s2">"H"</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Pixel</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">colour</span><span class="p">:</span> <span class="n">rgb565</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">Pixel</span><span class="p">(</span><span class="n">colour</span><span class="o">=</span><span class="mh">0xF800</span><span class="p">)))</span>
+<span class="go">b'\xf8\x00'</span>
+</pre></div>
+</div>
+</section>
+<section id="strings">
+<h2>Strings<a class="headerlink" href="#strings" title="Link to this heading"></a></h2>
+<p><cite>string</cite> and <cite>pascalstring</cite> fields have a fixed length in bytes, set with
+<cite>stringfield(length)</cite>. Their values are <cite>bytes</cite>, not <cite>str</cite>. By default a <cite>string</cite> is
+<cite>length</cite> zero bytes and a <cite>pascalstring</cite> is empty; <cite>stringfield(length, default=b”…”)</cite>
+sets another default.</p>
+<p>A <cite>string</cite> is padded with zero bytes to its length, and keeps them when parsed:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Named</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">name</span><span class="p">:</span> <span class="n">string</span> <span class="o">=</span> <span class="n">stringfield</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">Named</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">b</span><span class="s2">"binmap"</span><span class="p">)))</span>
+<span class="go">b'binmap\x00\x00'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">Named</span><span class="p">(</span><span class="sa">b</span><span class="s2">"hello</span><span class="se">\x00\x00\x00</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">b'hello\x00\x00\x00'</span>
+</pre></div>
+</div>
+<p>A <cite>pascalstring</cite> stores the string’s length in its first byte, so it holds at most
+<cite>length - 1</cite> bytes (and never more than 255), and parsing returns just the string:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">PascalNamed</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">name</span><span class="p">:</span> <span class="n">pascalstring</span> <span class="o">=</span> <span class="n">stringfield</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">PascalNamed</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">b</span><span class="s2">"binmap"</span><span class="p">)))</span>
+<span class="go">b'\x06binmap\x00'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">PascalNamed</span><span class="p">(</span><span class="sa">b</span><span class="s2">"</span><span class="se">\x06</span><span class="s2">binmap</span><span class="se">\x00</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">b'binmap'</span>
+</pre></div>
+</div>
+<p>A value longer than the field holds is rejected, instead of being cut:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Named</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">b</span><span class="s2">"much too long"</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">struct.error</span>: <span class="n">name holds at most 8 bytes, got 13</span>
+</pre></div>
+</div>
+</section>
+<section id="padding">
+<h2>Padding<a class="headerlink" href="#padding" title="Link to this heading"></a></h2>
+<p>Padding is a field type and datatype that is <cite>length</cite> bytes long, and will not show up as
+attributes in the dataclass. Trying to assign it a value will be silently
+ignored and reading from will raise the <cite>AttributeError</cite> exception.
+Padding is also left out of <cite>dataclasses.asdict()</cite>, <cite>dataclasses.astuple()</cite> and
+<cite>dataclasses.fields()</cite> of an instance, and is ignored by <cite>==</cite>. <cite>dataclasses.fields()</cite> of
+the class still lists padding, so pair <cite>astuple(obj)</cite> with <cite>fields(obj)</cite>, not with
+<cite>fields(PaddedData)</cite>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">PaddedData</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">temp</span><span class="p">:</span> <span class="n">signedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">... </span>    <span class="n">pad1</span><span class="p">:</span> <span class="n">pad</span> <span class="o">=</span> <span class="n">padding</span><span class="p">(</span><span class="n">length</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pd</span> <span class="o">=</span> <span class="n">PaddedData</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pd</span><span class="o">.</span><span class="n">temp</span> <span class="o">=</span> <span class="mi">14</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">pd</span><span class="p">))</span>
+<span class="go">b'\x0e\x00\x00\x00\x00\x00'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">asdict</span><span class="p">(</span><span class="n">pd</span><span class="p">))</span>
+<span class="go">{'temp': 14}</span>
+</pre></div>
+</div>
+</section>
+<section id="constant">
+<h2>Constant<a class="headerlink" href="#constant" title="Link to this heading"></a></h2>
+<p>Constant is fieldtype that always is the given value. Constant could be of any
+datatype.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Constant</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">signature</span><span class="p">:</span> <span class="n">unsignedshort</span> <span class="o">=</span> <span class="n">constant</span><span class="p">(</span><span class="mh">0x1313</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">temp</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">Constant</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">temp</span> <span class="o">=</span> <span class="mi">18</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+<span class="go">b'\x13\x13\x12'</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">signature</span><span class="p">)</span>
+<span class="go">4883</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">temp</span><span class="p">)</span>
+<span class="go">18</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">signature</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">AttributeError</span>: <span class="n">signature is a constant</span>
+</pre></div>
+</div>
+</section>
+<section id="enums">
+<h2>Enums<a class="headerlink" href="#enums" title="Link to this heading"></a></h2>
+<p>Enumfield maps against IntEnum or IntFlag, so you can set the value as a member,
+a member’s name or a number. A name stores the member it names. A number is stored as
+given and has to match one of the enum’s values. Either way the value has to fit the
+field.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">WindEnum</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">North</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">... </span>    <span class="n">East</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">... </span>    <span class="n">South</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">... </span>    <span class="n">West</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Wind</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">speed</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">... </span>    <span class="n">direction</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="n">enumfield</span><span class="p">(</span><span class="n">WindEnum</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">WindEnum</span><span class="o">.</span><span class="n">East</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span> <span class="o">=</span> <span class="n">Wind</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+<span class="go">Wind(speed=0, direction=&lt;WindEnum.East: 1&gt;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">WindEnum</span><span class="o">.</span><span class="n">West</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span>
+<span class="go">&lt;WindEnum.West: 3&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">==</span> <span class="n">WindEnum</span><span class="o">.</span><span class="n">South</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="s2">"North"</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span>
+<span class="go">&lt;WindEnum.North: 0&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">w</span><span class="p">))</span>
+<span class="go">b'\x00\x00'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">ValueError</span>: <span class="n">7 is not a valid WindEnum</span>
+</pre></div>
+</div>
+</section>
+<section id="autolength">
+<h2>Autolength<a class="headerlink" href="#autolength" title="Link to this heading"></a></h2>
+<p>Autolength field types count the number of bytes in the output, including the
+autolength field itself. You can’t set an autolength field. Autolength can be
+offset, for example to ignore its own length.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">MyBinStruct</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">length</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="n">autolength</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="n">temp</span><span class="p">:</span> <span class="n">signedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mb</span> <span class="o">=</span> <span class="n">MyBinStruct</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mb</span><span class="p">)</span>
+<span class="go">MyBinStruct(length=2, temp=0)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mb</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">AttributeError</span>: <span class="n">length is a constant</span>
+</pre></div>
+</div>
+</section>
+<section id="calculated-fields">
+<h2>Calculated fields<a class="headerlink" href="#calculated-fields" title="Link to this heading"></a></h2>
+<p>Calculated fields calls a function when data is converted to binary value. The
+function must be declared when the field is added.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">WithChecksum</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">temp</span><span class="p">:</span> <span class="n">signedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">... </span>    <span class="n">hum</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">chk</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">unsignedchar</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">hum</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+<span class="gp">... </span>    <span class="n">checksum</span><span class="p">:</span> <span class="n">unsignedchar</span> <span class="o">=</span> <span class="n">calculatedfield</span><span class="p">(</span><span class="n">chk</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wc</span> <span class="o">=</span> <span class="n">WithChecksum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wc</span><span class="o">.</span><span class="n">temp</span> <span class="o">=</span> <span class="o">-</span><span class="mi">20</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wc</span><span class="o">.</span><span class="n">hum</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">wc</span><span class="p">)</span>
+<span class="go">WithChecksum(temp=-20, hum=10, checksum=246)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">wc</span><span class="p">))</span>
+<span class="go">b'\xec\n\xf6'</span>
+</pre></div>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="binmap.html">binmap</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BaseDescriptor"><code class="docutils literal notranslate"><span class="pre">BaseDescriptor</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinField"><code class="docutils literal notranslate"><span class="pre">BinField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.BinmapDataclass"><code class="docutils literal notranslate"><span class="pre">BinmapDataclass</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.CalculatedField"><code class="docutils literal notranslate"><span class="pre">CalculatedField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.ConstField"><code class="docutils literal notranslate"><span class="pre">ConstField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.EnumField"><code class="docutils literal notranslate"><span class="pre">EnumField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.PaddingField"><code class="docutils literal notranslate"><span class="pre">PaddingField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.StringField"><code class="docutils literal notranslate"><span class="pre">StringField</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.autolength"><code class="docutils literal notranslate"><span class="pre">autolength()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.calculatedfield"><code class="docutils literal notranslate"><span class="pre">calculatedfield()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.constant"><code class="docutils literal notranslate"><span class="pre">constant()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.enumfield"><code class="docutils literal notranslate"><span class="pre">enumfield()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.padding"><code class="docutils literal notranslate"><span class="pre">padding()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.stringfield"><code class="docutils literal notranslate"><span class="pre">stringfield()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="binmap.html" class="btn btn-neutral float-right" title="binmap" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Jimmy Hedman.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
