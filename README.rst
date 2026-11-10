@@ -175,9 +175,10 @@ datatype.
 
 Enums
 -----
-Enumfield maps against IntEnum or IntFlag so that you could set the value
-either as the enum or as the numeric value. The value is stored as given, and a
-number has to match one of the enum's values.
+Enumfield maps against IntEnum or IntFlag, so you can set the value as a member,
+a member's name or a number. A name stores the member it names. A number is stored as
+given and has to match one of the enum's values. Either way the value has to fit the
+field.
 
 .. code-block:: python
 
@@ -200,6 +201,11 @@ number has to match one of the enum's values.
    >>> w.direction = 2
    >>> w.direction == WindEnum.South
    True
+   >>> w.direction = "North"
+   >>> w.direction
+   <WindEnum.North: 0>
+   >>> print(bytes(w))
+   b'\x00\x00'
    >>> w.direction = 7
    Traceback (most recent call last):
    ...

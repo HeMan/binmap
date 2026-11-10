@@ -204,6 +204,16 @@ Read this before touching `binmap/__init__.py`.
   - Never validate with a bare code: that uses native sizes (`l` is 8 bytes on 64-bit
     Linux, 4 with `>`). `TestIntegerBounds` checks every integer type's bounds in both
     byte orders.
+  - Subclasses that add checks (`StringField`, `EnumField`) must end in
+    `super().__set__()`, so the struct check still runs.
+- **Enum fields** (`EnumField`) accept a member, a member's name or a number.
+  - A name is looked up (unknown: `KeyError`) and stores the *member*.
+  - An `int` must be one of the enum's values (`ValueError`) and is stored as given;
+    `IntFlag` accepts any combination of bits.
+  - Anything else raises `ValueError`, even a float the enum itself would accept, such as
+    `2.0` for a member worth 2.
+  - Then the value must fit the field, like any other.
+  - The enum class is bound to the descriptor when the class is created.
 - **The raw-bytes argument** is the `InitVar` `__binarydata`, name-mangled to
   `_BinmapDataclass__binarydata`. It is the first positional parameter, which is why
   `Cls(b"...")` parses data. Code that iterates fields skips names that start with
@@ -339,8 +349,8 @@ not what `__init_subclass__` does at runtime. Keep these in place:
     - field values read back from the instance `__dict__`, which Python types as
       `dict[str, Any]`.
   - Don't narrow those with `cast()` just to look precise. A cast is an unchecked
-    promise; an `EnumField` assigned a member's *name* stores the string, which would
-    break a cast to `int | float | bytes`.
+    promise, and nothing proves what's in `__dict__`: internal code, `copy` and
+    `pickle` write it directly, bypassing validation.
   - Use `cast()` (with a comment) only where binmap guarantees the type itself, e.g.
     `Field.default` for padding (`int`) and strings (`bytes`).
   - The two `pyright: ignore`s in `binmap/__init__.py` are intentional:
