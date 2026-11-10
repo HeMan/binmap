@@ -1,20 +1,26 @@
+# pyright: strict
+"""Single-letter aliases for the types in :mod:`binmap.types`, named after their
+:py:mod:`struct` format characters."""
+
+from typing import TypeAlias
+
 from binmap import types
 
-_b = types.boolean
-c = types.char
-d = types.double
-f = types.floating
-e = types.halffloat
-i = types.integer
-l = types.long  # noqa: E741
-q = types.longlong
-x = types.pad
-p = types.pascalstring
-h = types.short
-b = types.signedchar
-s = types.string
-B = types.unsignedchar
-I = types.unsignedinteger  # noqa: E741
-L = types.unsignedlong
-Q = types.unsignedlonglong
-H = types.unsignedshort
+_b: TypeAlias = types.boolean
+c: TypeAlias = types.char
+d: TypeAlias = types.double
+f: TypeAlias = types.floating
+e: TypeAlias = types.halffloat
+i: TypeAlias = types.integer
+l: TypeAlias = types.long  # noqa: E741
+q: TypeAlias = types.longlong
+x: TypeAlias = types.pad
+p: TypeAlias = types.pascalstring
+h: TypeAlias = types.short
+b: TypeAlias = types.signedchar
+s: TypeAlias = types.string
+B: TypeAlias = types.unsignedchar
+I: TypeAlias = types.unsignedinteger  # noqa: E741
+L: TypeAlias = types.unsignedlong
+Q: TypeAlias = types.unsignedlonglong
+H: TypeAlias = types.unsignedshort
