@@ -107,17 +107,31 @@ class PaddingField(BaseDescriptor):
 
 
 class EnumField(BinField):
-    """EnumField descriptor uses "enum" to map to and from strings. Accepts
-    both strings and values when setting. Only values that has a corresponding
-    string is allowed."""
+    """EnumField descriptor for fields made with :func:`enumfield`. Accepts a
+    member, a member's name or a number. A name stores the member it names; a
+    number is stored as given. Either way the value must belong to the enum and
+    fit the field, like any other field's value.
+
+    :raises KeyError: for a name that isn't a member's
+    :raises ValueError: for a number that isn't one of the enum's values
+    :raises struct.error: for a value that doesn't fit the field"""
+
+    def __init__(
+        self, name: str, enumclass: Union[Type[IntEnum], Type[IntFlag]]
+    ) -> None:
+        super().__init__(name)
+        self.enumclass = enumclass
 
     def __set__(self, obj: "BinmapDataclass", value: object) -> None:
-        datafieldsmap = {f.name: f for f in dataclasses.fields(obj)}
         if isinstance(value, str):
-            datafieldsmap[self.name].metadata["enum"][value]
+            value = self.enumclass[value]
+        elif isinstance(value, int):
+            self.enumclass(value)
         else:
-            datafieldsmap[self.name].metadata["enum"](value)
-        obj.__dict__[self.name] = value
+            # The enum would accept e.g. 2.0 for a member worth 2; the field can't
+            raise ValueError(f"{value!r} is not a valid {self.enumclass.__qualname__}")
+        # BinField checks that the value fits the field, then stores it
+        super().__set__(obj, value)
 
 
 class ConstField(BinField):
@@ -380,7 +394,7 @@ class BinmapDataclass:
             if "constant" in field_.metadata:
                 _base = ConstField
             elif "enum" in field_.metadata:
-                _base = EnumField
+                _base = partial(EnumField, enumclass=field_.metadata["enum"])
             elif "autolength" in field_.metadata:
                 _base = ConstField
             elif "function" in field_.metadata:
