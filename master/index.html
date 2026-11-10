@@ -119,7 +119,28 @@ being silently added:</p>
 <h2>Datatypes<a class="headerlink" href="#datatypes" title="Link to this heading"></a></h2>
 <p>Binmap supports all datatypes that standard library <a class="reference external" href="https://docs.python.org/3/library/struct.html">struct</a> has.
 The types works as typehints in the dataclass. When giving an attribute a
-typehinted datatype it will be added to the binary output from the class.</p>
+typehinted datatype it will be added to the binary output from the class.
+Plain <cite>int</cite>, <cite>float</cite> and <cite>bool</cite> work too (packed like <cite>integer</cite>, <cite>floating</cite> and
+<cite>boolean</cite>), as does <cite>bytes</cite> with a <cite>stringfield</cite>.</p>
+</section>
+<section id="type-checking-and-editors">
+<h2>Type checking and editors<a class="headerlink" href="#type-checking-and-editors" title="Link to this heading"></a></h2>
+<p>Binmap ships type information (<cite>py.typed</cite>), and type checkers and editors see binmap
+classes as dataclasses: they know each class’s constructor and show fields as plain
+Python types (<cite>int</cite>, <cite>float</cite>, <cite>bool</cite> or <cite>bytes</cite>). CI checks this with mypy and with
+pyright, the engine behind VS Code’s Pylance.</p>
+<p>The types in <cite>binmap.types</cite> are <cite>Annotated</cite> aliases that carry the struct format
+character in a <cite>StructCode</cite>, so you can define your own:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">binmap.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">StructCode</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rgb565</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">StructCode</span><span class="p">(</span><span class="s2">"H"</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Pixel</span><span class="p">(</span><span class="n">BinmapDataclass</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">colour</span><span class="p">:</span> <span class="n">rgb565</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">Pixel</span><span class="p">(</span><span class="n">colour</span><span class="o">=</span><span class="mh">0xF800</span><span class="p">)))</span>
+<span class="go">b'\xf8\x00'</span>
+</pre></div>
+</div>
 </section>
 <section id="strings">
 <h2>Strings<a class="headerlink" href="#strings" title="Link to this heading"></a></h2>
@@ -285,7 +306,6 @@ function must be declared when the field is added.</p>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.EnumField"><code class="docutils literal notranslate"><span class="pre">EnumField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.PaddingField"><code class="docutils literal notranslate"><span class="pre">PaddingField</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.StringField"><code class="docutils literal notranslate"><span class="pre">StringField</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap._FieldsWithoutPaddingOnInstances"><code class="docutils literal notranslate"><span class="pre">_FieldsWithoutPaddingOnInstances</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.autolength"><code class="docutils literal notranslate"><span class="pre">autolength()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.calculatedfield"><code class="docutils literal notranslate"><span class="pre">calculatedfield()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="binmap.html#binmap.constant"><code class="docutils literal notranslate"><span class="pre">constant()</span></code></a></li>
