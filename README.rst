@@ -277,3 +277,13 @@ for these before version 2.0.
    ... except TypeError as error:
    ...     print(error)
    temp needs an int, got str
+
+
+AI coding assistants
+--------------------
+binmap comes with an `Agent Skill <https://agentskills.io/>`_ that teaches AI coding
+assistants such as Claude Code, Codex and Cursor how to use it:
+`skills/binmap/SKILL.md <https://github.com/HeMan/binmap/blob/master/skills/binmap/SKILL.md>`_.
+Install it in your project with `npx skills add HeMan/binmap`, or copy the
+`skills/binmap` folder into your assistant's skills folder (`.claude/skills/` for
+Claude Code).

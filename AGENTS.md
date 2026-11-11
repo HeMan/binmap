@@ -37,7 +37,9 @@ messages, and `repr` output.
 | `binmap/st.py` | Single-letter aliases named after the `struct` format characters (`st.B`, `st.H`, `st.x`, ...). |
 | `binmap/py.typed` | PEP 561 marker: tells type checkers to use binmap's annotations. Shipped via `package_data` in `setup.py`. |
 | `tests/test_binmap.py` | Tests for the library. |
+| `skills/binmap/SKILL.md` | An [Agent Skill](https://agentskills.io/specification) that teaches *users'* AI assistants to use binmap (this file is for working *on* binmap). `npx skills add HeMan/binmap` installs it from the `skills/` folder. |
 | `tests/test_readme.py` | Runs every `>>>` example in `README.rst` as a doctest. |
+| `tests/test_skill.py` | Runs every `python` block in `SKILL.md` on its own, checks the frontmatter against the Agent Skills specification, and checks that every type, field function and exception is documented. |
 | `tests/test_packaging.py` | Checks that `setup.py` packages only `binmap` (and its subpackages) and ships `py.typed`. Skipped without setuptools. |
 | `tests/typecheck/check_usage.py` | Everyday user code that mypy and pyright must accept without errors (CI checks it). `tests/test_typecheck.py` runs it, so it must also work at runtime. |
 | `docs/source/` | Sphinx docs. `index.rst` includes `README.rst`; `binmap.rst` autodocs the package. `conf.py` reads the version from `setup.py`. |
@@ -284,6 +286,8 @@ Read this before touching `binmap/__init__.py`.
 2. Add the single-letter alias in `binmap/st.py`.
 3. Add a field to `AllDatatypes` in the tests, then update the expected bytes and the
    expected `str()`. For an integer type, add it to `INTEGER_TYPES` as well.
+4. Add it to the type table in `skills/binmap/SKILL.md`; `tests/test_skill.py` fails
+   until you do.
 
 ### Types for type checkers and editors
 
@@ -350,6 +354,15 @@ not what `__init_subclass__` does at runtime. Keep these in place:
   - The examples leave out imports. The test supplies binmap's public names, the type
     names, `IntEnum`, `asdict` and `astuple`; add others there if an example needs them.
   - The README is also the PyPI long description and the docs landing page.
+- **The skill's examples are tests too.** `skills/binmap/SKILL.md` is user
+  documentation for AI assistants, so update it along with the README whenever the
+  public API or its behaviour changes.
+  - `tests/test_skill.py` runs each `python` block in a fresh namespace, so every
+    block must include its own imports and check its results with `assert`.
+  - Keep the examples clean under `mypy --strict` and pyright, because assistants
+    copy them into type-checked code.
+  - Agents load the whole file when the skill is used, so keep it under 500 lines
+    (the specification's advice).
 
 ## Code style
 
